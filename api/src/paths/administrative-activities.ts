@@ -2,9 +2,8 @@ import { RequestHandler } from 'express';
 import { Operation } from 'express-openapi';
 import { SYSTEM_ROLE } from '../constants/roles';
 import { getDBConnection } from '../database/db';
-import { HTTP400 } from '../errors/custom-error';
-import { queries } from '../queries/queries';
 import { authorizeRequestHandler } from '../request-handlers/security/authorization';
+import { AccessService, getAllAdministrativeActivityStatusTypes } from '../services/access-service';
 import { getLogger } from '../utils/logger';
 
 const defaultLog = getLogger('paths/administrative-activities');
@@ -22,15 +21,6 @@ export const GET: Operation = [
   }),
   getAdministrativeActivities()
 ];
-
-export enum ADMINISTRATIVE_ACTIVITY_STATUS_TYPE {
-  PENDING = 'Pending',
-  ACTIONED = 'Actioned',
-  REJECTED = 'Rejected'
-}
-
-export const getAllAdministrativeActivityStatusTypes = (): string[] =>
-  Object.values(ADMINISTRATIVE_ACTIVITY_STATUS_TYPE);
 
 GET.apiDoc = {
   description: 'Get a list of administrative activities based on the provided criteria.',
@@ -142,28 +132,21 @@ export function getAdministrativeActivities(): RequestHandler {
   return async (req, res) => {
     const connection = getDBConnection(req['keycloak_token']);
 
+    const administrativeActivityTypeName = req.query.type as string;
+
+    const administrativeActivityStatusTypes: string[] =
+      (req.query.status as string[]) || getAllAdministrativeActivityStatusTypes();
     try {
-      const administrativeActivityTypeName = (req.query?.type as string) || undefined;
+      await connection.open();
 
-      const administrativeActivityStatusTypes: string[] =
-        (req.query?.status as string[]) || getAllAdministrativeActivityStatusTypes();
+      const accessService = new AccessService(connection);
 
-      const sqlStatement = queries.administrativeActivity.getAdministrativeActivitiesSQL(
+      const result = await accessService.getAdministrativeActivities(
         administrativeActivityTypeName,
         administrativeActivityStatusTypes
       );
 
-      if (!sqlStatement) {
-        throw new HTTP400('Failed to build SQL get statement');
-      }
-
-      await connection.open();
-
-      const response = await connection.query(sqlStatement.text, sqlStatement.values);
-
       await connection.commit();
-
-      const result = (response && response.rowCount && response.rows) || [];
 
       return res.status(200).json(result);
     } catch (error) {

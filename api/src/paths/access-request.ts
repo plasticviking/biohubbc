@@ -1,22 +1,13 @@
 import { RequestHandler } from 'express';
 import { Operation } from 'express-openapi';
 import { SYSTEM_IDENTITY_SOURCE } from '../constants/database';
-import { ACCESS_REQUEST_APPROVAL_ADMIN_EMAIL } from '../constants/notifications';
 import { SYSTEM_ROLE } from '../constants/roles';
-import { getDBConnection, IDBConnection } from '../database/db';
-import { ApiBuildSQLError, ApiGeneralError, HTTP400 } from '../errors/custom-error';
-import { queries } from '../queries/queries';
+import { getDBConnection } from '../database/db';
 import { authorizeRequestHandler } from '../request-handlers/security/authorization';
-import { GCNotifyService } from '../services/gcnotify-service';
-import { KeycloakService } from '../services/keycloak-service';
-import { UserService } from '../services/user-service';
+import { AccessService } from '../services/access-service';
 import { getLogger } from '../utils/logger';
-import { updateAdministrativeActivity } from './administrative-activity';
 
 const defaultLog = getLogger('paths/access-request');
-
-const APP_HOST = process.env.APP_HOST;
-const NODE_ENV = process.env.NODE_ENV;
 
 export const PUT: Operation = [
   authorizeRequestHandler(() => {
@@ -113,51 +104,14 @@ export function updateAccessRequest(): RequestHandler {
   return async (req, res) => {
     defaultLog.debug({ label: 'updateAccessRequest', message: 'params', req_body: req.body });
 
-    const userIdentifier = req.body?.userIdentifier || null;
-    const identitySource = req.body?.identitySource || null;
-    const administrativeActivityId = Number(req.body?.requestId) || null;
-    const administrativeActivityStatusTypeId = Number(req.body?.requestStatusTypeId) || null;
-    const roleIds: number[] = req.body?.roleIds || [];
-
-    if (!userIdentifier) {
-      throw new HTTP400('Missing required body param: userIdentifier');
-    }
-
-    if (!identitySource) {
-      throw new HTTP400('Missing required body param: identitySource');
-    }
-
-    if (!administrativeActivityId) {
-      throw new HTTP400('Missing required body param: requestId');
-    }
-
-    if (!administrativeActivityStatusTypeId) {
-      throw new HTTP400('Missing required body param: requestStatusTypeId');
-    }
-
     const connection = getDBConnection(req['keycloak_token']);
 
     try {
       await connection.open();
 
-      const userService = new UserService(connection);
+      const accessService = new AccessService(connection);
 
-      // Get the system user (adding or activating them if they already existed).
-      const systemUserObject = await userService.ensureSystemUser(userIdentifier, identitySource);
-
-      // Filter out any system roles that have already been added to the user
-      const rolesIdsToAdd = roleIds.filter((roleId) => !systemUserObject.role_ids.includes(roleId));
-
-      if (rolesIdsToAdd?.length) {
-        // Add any missing roles (if any)
-        await userService.addUserSystemRoles(systemUserObject.id, rolesIdsToAdd);
-      }
-
-      // Update the access request record status
-      await updateAdministrativeActivity(administrativeActivityId, administrativeActivityStatusTypeId, connection);
-
-      //if the access request is an approval send Approval email
-      sendApprovalEmail(administrativeActivityStatusTypeId, connection, userIdentifier, identitySource);
+      await accessService.updateAccessRequest(req.body);
 
       await connection.commit();
 
@@ -169,62 +123,4 @@ export function updateAccessRequest(): RequestHandler {
       connection.release();
     }
   };
-}
-
-export async function sendApprovalEmail(
-  adminActivityTypeId: number,
-  connection: IDBConnection,
-  userIdentifier: string,
-  identitySource: string
-) {
-  if (await checkIfAccessRequestIsApproval(adminActivityTypeId, connection)) {
-    const userEmail = await getUserKeycloakEmail(userIdentifier, identitySource);
-    sendAccessRequestApprovalEmail(userEmail);
-  }
-}
-
-export async function checkIfAccessRequestIsApproval(
-  adminActivityTypeId: number,
-  connection: IDBConnection
-): Promise<boolean> {
-  const adminActivityStatusTypeSQLStatment = queries.administrativeActivity.getAdministrativeActivityById(
-    adminActivityTypeId
-  );
-
-  if (!adminActivityStatusTypeSQLStatment) {
-    throw new ApiBuildSQLError('Failed to build SQL select statement');
-  }
-
-  const response = await connection.query(
-    adminActivityStatusTypeSQLStatment.text,
-    adminActivityStatusTypeSQLStatment.values
-  );
-
-  if (response.rows?.[0]?.name === 'Actioned') {
-    return true;
-  }
-  return false;
-}
-
-export async function getUserKeycloakEmail(userIdentifier: string, identitySource: string): Promise<string> {
-  const keycloakService = new KeycloakService();
-  const userDetails = await keycloakService.getUserByUsername(`${userIdentifier}@${identitySource}`);
-  return userDetails.email;
-}
-
-export async function sendAccessRequestApprovalEmail(userEmail: string) {
-  const gcnotifyService = new GCNotifyService();
-
-  const url = `${APP_HOST}/`;
-  const hrefUrl = `[click here.](${url})`;
-  try {
-    await gcnotifyService.sendEmailGCNotification(userEmail, {
-      ...ACCESS_REQUEST_APPROVAL_ADMIN_EMAIL,
-      subject: `${NODE_ENV}: ${ACCESS_REQUEST_APPROVAL_ADMIN_EMAIL.subject}`,
-      body1: `${ACCESS_REQUEST_APPROVAL_ADMIN_EMAIL.body1} ${hrefUrl}`,
-      footer: `${APP_HOST}`
-    });
-  } catch (error) {
-    throw new ApiGeneralError('Failed to send gcNotification approval email', [(error as Error).message]);
-  }
 }
