@@ -1,5 +1,6 @@
 import { RequestHandler } from 'express';
 import { Operation } from 'express-openapi';
+import { Feature } from 'geojson';
 import { PROJECT_ROLE } from '../../../../constants/roles';
 import { getDBConnection, IDBConnection } from '../../../../database/db';
 import { HTTP400 } from '../../../../errors/custom-error';
@@ -303,6 +304,9 @@ export function createSurvey(): RequestHandler {
           )
         );
 
+        //Handle survey spatial component data
+        promises.push(insertSurveySpatialComponent(sanitizedPostSurveyData.geometry, surveyId, connection));
+
         await Promise.all(promises);
 
         await connection.commit();
@@ -379,6 +383,27 @@ export const insertVantageCodes = async (
 
   if (!result || !result.id) {
     throw new HTTP400('Failed to insert ancillary species data');
+  }
+
+  return result.id;
+};
+
+export const insertSurveySpatialComponent = async (
+  survey_geometry: Feature[],
+  survey_id: number,
+  connection: IDBConnection
+): Promise<number> => {
+  const sqlStatement = queries.survey.postSurveySpatialComponentSQL(survey_id, survey_geometry);
+
+  if (!sqlStatement) {
+    throw new HTTP400('Failed to build SQL insert statement');
+  }
+
+  const response = await connection.query(sqlStatement.text, sqlStatement.values);
+  const result = (response && response.rows && response.rows[0]) || null;
+
+  if (!result || !result.id) {
+    throw new HTTP400('Failed to insert survey spatial component data');
   }
 
   return result.id;

@@ -1,3 +1,4 @@
+import { Feature } from 'geojson';
 import { SQL, SQLStatement } from 'sql-template-strings';
 import { PostSurveyObject, PostSurveyProprietorData } from '../../models/survey-create';
 import { queries } from '../queries';
@@ -26,10 +27,8 @@ export const postSurveySQL = (projectId: number, survey: PostSurveyObject): SQLS
       lead_first_name,
       lead_last_name,
       location_name,
-      geojson,
       field_method_id,
-      surveyed_all_areas,
-      geography
+      surveyed_all_areas
     ) VALUES (
       ${projectId},
       ${survey.survey_name},
@@ -41,36 +40,63 @@ export const postSurveySQL = (projectId: number, survey: PostSurveyObject): SQLS
       ${survey.biologist_first_name},
       ${survey.biologist_last_name},
       ${survey.survey_area_name},
-      ${JSON.stringify(survey.geometry)},
       ${survey.field_method_id},
       ${survey.surveyed_all_areas}
   `;
-
-  if (survey.geometry && survey.geometry.length) {
-    const geometryCollectionSQL = queries.spatial.generateGeometryCollectionSQL(survey.geometry);
-
-    sqlStatement.append(SQL`
-      ,public.geography(
-        public.ST_Force2D(
-          public.ST_SetSRID(
-    `);
-
-    sqlStatement.append(geometryCollectionSQL);
-
-    sqlStatement.append(SQL`
-      , 4326)))
-    `);
-  } else {
-    sqlStatement.append(SQL`
-      ,null
-    `);
-  }
 
   sqlStatement.append(SQL`
     )
     RETURNING
       survey_id as id;
   `);
+
+  return sqlStatement;
+};
+
+/**
+ * SQL query to insert a survey_spatial_component row.
+ *
+ * @param {number} surveyId
+ * @param {PostSurveyProprietorData} survey_geometry
+ * @return {*}  {(SQLStatement | null)}
+ */
+export const postSurveySpatialComponentSQL = (surveyId: number, survey_geometry: Feature[]): SQLStatement | null => {
+  if (!surveyId || !survey_geometry) {
+    return null;
+  }
+
+  const sqlStatement: SQLStatement = SQL`
+  INSERT INTO survey_spatial_component(
+    survey_id,
+    geography
+  ) VALUES (
+    ${surveyId}
+    `;
+  if (survey_geometry && survey_geometry.length) {
+    const geometryCollectionSQL = queries.spatial.generateGeometryCollectionSQL(survey_geometry);
+
+    sqlStatement.append(SQL`
+        ,public.geography(
+          public.ST_Force2D(
+            public.ST_SetSRID(
+      `);
+
+    sqlStatement.append(geometryCollectionSQL);
+
+    sqlStatement.append(SQL`
+        , 4326)))
+      `);
+  } else {
+    sqlStatement.append(SQL`
+        ,null
+      `);
+  }
+
+  sqlStatement.append(SQL`
+  )
+  RETURNING
+  survey_spatial_component_id as id;
+`);
 
   return sqlStatement;
 };
