@@ -1,5 +1,5 @@
 import { Request } from 'express';
-import { decode, GetPublicKeyOrSecret, Secret, verify, VerifyErrors } from 'jsonwebtoken';
+import { decode, GetPublicKeyOrSecret, JwtPayload, Secret, verify, VerifyCallback } from 'jsonwebtoken';
 import { JwksClient } from 'jwks-rsa';
 import { HTTP401 } from '../../errors/custom-error';
 import { getLogger } from '../../utils/logger';
@@ -102,16 +102,18 @@ const verifyToken = function (tokenString: string, secretOrPublicKey: Secret | G
 /**
  * Callback that returns the decoded token, or null.
  *
- * @param {(VerifyErrors | null)} verificationError
- * @param {(object | undefined)} verifiedToken
- * @return {*} {(object | null | undefined)}
+ * @param {*} verificationError
+ * @param {*} verifiedToken
+ * @return {*} JwtPayload
  */
-const verifyTokenCallback = function (
-  verificationError: VerifyErrors | null,
-  verifiedToken: object | undefined
-): object | null | undefined {
+const verifyTokenCallback: VerifyCallback<JwtPayload | string> = function (verificationError, verifiedToken) {
   if (verificationError) {
     defaultLog.warn({ label: 'verifyToken', message: 'jwt verification error', verificationError });
+    return null;
+  }
+
+  if (!verifiedToken) {
+    defaultLog.warn({ label: 'verifyToken', message: 'jwt token was null' });
     return null;
   }
 

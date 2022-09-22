@@ -1,14 +1,5 @@
 # bcgov/biohubbc/api
 
-## Technologies Used
-
-| Technology | Version | Website                              | Description          |
-| ---------- | ------- | ------------------------------------ | -------------------- |
-| node       | 14.x.x  | https://nodejs.org/en/               | JavaScript Runtime   |
-| npm        | 6.x.x   | https://www.npmjs.com/               | Node Package Manager |
-
-<br />
-
 # API Specification
 
 The root API schema is defined in `./src/openapi/api.ts`.
