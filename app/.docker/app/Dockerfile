@@ -15,7 +15,7 @@ ENV PATH $HOME/node_modules/.bin:$PATH
 COPY package*.json ./
 
 # If you are building your code for production
-# RUN npm install --only=production
+# RUN npm install --legacy-peer-deps --only=production
 RUN npm install --legacy-peer-deps
 
 # ENV PATH ${HOME}/node_modules/.bin/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH

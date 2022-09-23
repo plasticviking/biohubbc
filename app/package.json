@@ -101,8 +101,7 @@
     "prettier": "~2.2.1",
     "prettier-plugin-organize-imports": "~2.3.4",
     "react-scripts": "~3.4.4",
-    "sass": "^1.55.0",
-    "sass-loader": "^13.0.2"
+    "sass": "~1.55.0"
   },
   "browserslist": {
     "production": [

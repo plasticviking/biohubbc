@@ -1,16 +1,15 @@
-FROM node:16.13.0
+FROM node:16.13.0-alpine
 
-RUN apk add --no-cache python2 g++ make
+RUN apk update && apk add python2 make g++
 
 # set variables
-ENV HOME_ROOT=/opt/app-root
 ENV HOME=/opt/app-root/src
 
 RUN mkdir -p $HOME
 
-WORKDIR $HOME_ROOT
-
 WORKDIR $HOME
+
+ENV PATH $HOME/node_modules/.bin:$PATH
 
 COPY . .
 
