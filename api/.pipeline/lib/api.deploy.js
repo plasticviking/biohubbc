@@ -53,6 +53,7 @@ const apiDeploy = async (settings) => {
         KEYCLOAK_SECRET: phases[phase].sso.keycloakSecret,
         KEYCLOAK_SECRET_ADMIN_PASSWORD: phases[phase].sso.keycloakSecretAdminPassword,
         LOG_LEVEL: phases[phase].logLevel || 'info',
+        FEATURE_FLAGS: phases[phase].featureFlags,
         CPU_REQUEST: phases[phase].cpuRequest,
         CPU_LIMIT: phases[phase].cpuLimit,
         MEMORY_REQUEST: phases[phase].memoryRequest,

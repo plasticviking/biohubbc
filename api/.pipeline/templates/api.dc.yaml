@@ -116,6 +116,9 @@ parameters:
     value: https://api.notification.canada.ca/v2/notifications/email
   - name: GCNOTIFY_SMS_URL
     value: https://api.notification.canada.ca/v2/notifications/sms
+  - name: FEATURE_FLAGS
+    description: Used to identify features that should be temporarily disabled/hidden. Must be a comma delimited list of keywords.
+    value: ''
   - name: CPU_REQUEST
     value: '100m'
   - name: CPU_LIMIT
@@ -291,6 +294,8 @@ objects:
                   value: ${GCNOTIFY_EMAIL_URL}
                 - name: GCNOTIFY_SMS_URL
                   value: ${GCNOTIFY_SMS_URL}
+                - name: FEATURE_FLAGS
+                  value: ${FEATURE_FLAGS}
               image: ' '
               imagePullPolicy: Always
               name: api

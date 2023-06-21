@@ -14,6 +14,10 @@ export interface IConfig {
   MAX_UPLOAD_NUM_FILES: number;
   MAX_UPLOAD_FILE_SIZE: number;
   S3_PUBLIC_HOST_URL: string;
+  FEATURE_FLAGS: {
+    name: string;
+    value: boolean;
+  }[];
 }
 
 export const ConfigContext = React.createContext<IConfig | undefined>({
@@ -30,8 +34,44 @@ export const ConfigContext = React.createContext<IConfig | undefined>({
   SITEMINDER_LOGOUT_URL: '',
   MAX_UPLOAD_NUM_FILES: 10,
   MAX_UPLOAD_FILE_SIZE: 52428800,
-  S3_PUBLIC_HOST_URL: ''
+  S3_PUBLIC_HOST_URL: '',
+  FEATURE_FLAGS: []
 });
+
+/**
+ * Matches a string that is either:
+ * - `''` (an empty string)
+ * - `<string>:<true|false>` (a single instance)
+ * - `<string>:<true|false>,<string>:<true|false>,<string>:<true|false>...` (multiple comma delimited instances)
+ */
+const validFeatureFlagStringRegex =
+  /^(?:(?=\s*$)|(?:\w+:(?:true|false))|(?:\w+:(?:true|false)){1}(?:,\w+:(?:true|false))*)$/;
+
+/**
+ * Parses a valid feature flag string into an array of objects.
+ * Note: returns an empty array if the feature flag string does not conform to the expected regex pattern.
+ *
+ * @param {string} featureFlagsString
+ * @return {*}  {{ name: string; value: boolean }[]}
+ */
+const parseFeatureFlagsString = (featureFlagsString: string): { name: string; value: boolean }[] => {
+  if (!featureFlagsString) {
+    return [];
+  }
+
+  if (!validFeatureFlagStringRegex.test(featureFlagsString)) {
+    return [];
+  }
+
+  const flags = featureFlagsString.split(',');
+  return flags.map((flag) => {
+    const parts = flag.split(':');
+    return {
+      name: parts[0],
+      value: parts[1] === 'true'
+    };
+  });
+};
 
 /**
  * Return the app config based on locally set environment variables.
@@ -60,7 +100,8 @@ const getLocalConfig = (): IConfig => {
     SITEMINDER_LOGOUT_URL: process.env.REACT_APP_SITEMINDER_LOGOUT_URL || '',
     MAX_UPLOAD_NUM_FILES: Number(process.env.REACT_APP_MAX_UPLOAD_NUM_FILES) || 10,
     MAX_UPLOAD_FILE_SIZE: Number(process.env.REACT_APP_MAX_UPLOAD_FILE_SIZE) || 52428800,
-    S3_PUBLIC_HOST_URL: ensureProtocol(`${OBJECT_STORE_URL}/${OBJECT_STORE_BUCKET_NAME}`, 'https://')
+    S3_PUBLIC_HOST_URL: ensureProtocol(`${OBJECT_STORE_URL}/${OBJECT_STORE_BUCKET_NAME}`, 'https://'),
+    FEATURE_FLAGS: parseFeatureFlagsString(process.env.REACT_APP_FEATURE_FLAGS || '')
   };
 };
 

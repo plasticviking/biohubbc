@@ -50,6 +50,9 @@ parameters:
   - name: REACT_APP_KEYCLOAK_CLIENT_ID
     description: Client Id for application
     required: true
+  - name: REACT_APP_FEATURE_FLAGS
+    description: Used to identify features that should be temporarily disabled/hidden. Must be a comma delimited list of keywords.
+    value: ''
   - name: CPU_REQUEST
     value: '50m'
   - name: CPU_LIMIT
@@ -148,6 +151,8 @@ objects:
                   value: ${REACT_APP_KEYCLOAK_REALM}
                 - name: REACT_APP_KEYCLOAK_CLIENT_ID
                   value: ${REACT_APP_KEYCLOAK_CLIENT_ID}
+                - name: REACT_APP_FEATURE_FLAGS
+                  value: ${REACT_APP_FEATURE_FLAGS}
               image: ' '
               imagePullPolicy: Always
               name: app

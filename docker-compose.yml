@@ -84,6 +84,7 @@ services:
       - BACKBONE_INTAKE_PATH=${BACKBONE_INTAKE_PATH}
       - BACKBONE_ARTIFACT_INTAKE_PATH=${BACKBONE_ARTIFACT_INTAKE_PATH}
       - BACKBONE_INTAKE_ENABLED=${BACKBONE_INTAKE_ENABLED}
+      - FEATURE_FLAGS=${FEATURE_FLAGS}
     volumes:
       - ./api:/opt/app-root/src
       - /opt/app-root/src/node_modules # prevents local node_modules overriding container node_modules
@@ -126,6 +127,7 @@ services:
       - REACT_APP_KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID}
       - OBJECT_STORE_URL=${OBJECT_STORE_URL}
       - OBJECT_STORE_BUCKET_NAME=${OBJECT_STORE_BUCKET_NAME}
+      - REACT_APP_FEATURE_FLAGS=${FEATURE_FLAGS}
     volumes:
       - ./app:/opt/app-root/src
       - /opt/app-root/src/node_modules # prevents local node_modules overriding container node_modules

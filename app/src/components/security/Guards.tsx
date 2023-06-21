@@ -1,5 +1,6 @@
 import { PROJECT_ROLE, SYSTEM_ROLE } from 'constants/roles';
 import { AuthStateContext } from 'contexts/authStateContext';
+import { ConfigContext } from 'contexts/configContext';
 import { ProjectAuthStateContext } from 'contexts/projectAuthStateContext';
 import { PropsWithChildren, ReactElement, useContext } from 'react';
 import { isAuthenticated } from 'utils/authUtils';
@@ -39,6 +40,16 @@ export interface IProjectRoleGuardProps extends IGuardProps {
    * @memberof IProjectRoleGuardProps
    */
   validSystemRoles?: SYSTEM_ROLE[];
+}
+
+export interface IFeatureFlagGuardProps extends IGuardProps {
+  /**
+   * An array of feature flag names.
+   *
+   * @type {string[]}
+   * @memberof IFeatureFlagGuardProps
+   */
+  featureFlags: string[];
 }
 
 /**
@@ -125,4 +136,35 @@ export const UnAuthGuard = (props: PropsWithChildren<IGuardProps>) => {
   }
 
   return <>{props.children}</>;
+};
+
+/**
+ * Renders `props.children` if all of the specified feature flags exist and are `true`.
+ *
+ * Renders `props.fallback` if at least one of the specified feature flags exists and is `false`.
+ *
+ * Renders nothing if the feature flag does not exist.
+ *
+ * @param {*} props
+ * @return {*}
+ */
+export const FeatureFlagGuard = (props: PropsWithChildren<IFeatureFlagGuardProps>) => {
+  const config = useContext(ConfigContext);
+
+  const matchingFeatureFlags = config?.FEATURE_FLAGS.filter((featureFlag) =>
+    props.featureFlags.includes(featureFlag.name)
+  );
+
+  if (matchingFeatureFlags?.every((item) => item.value)) {
+    // If all specified feature flags exist and are `true`
+    return <>{props.children}</>;
+  }
+
+  if (matchingFeatureFlags?.some((item) => !item.value)) {
+    // If at least one of the specified feature flags exists and is `false`
+    return <>{props.fallback}</>;
+  }
+
+  // If none of the specified feature flags exist
+  return <></>;
 };
