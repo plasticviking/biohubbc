@@ -68,15 +68,7 @@ GET.apiDoc = {
             properties: {
               surveyData: {
                 type: 'object',
-                required: [
-                  'survey_details',
-                  'species',
-                  'permit',
-                  'funding',
-                  'proprietor',
-                  'purpose_and_methodology',
-                  'location'
-                ],
+                required: ['survey_details', 'species', 'permit', 'proprietor', 'purpose_and_methodology', 'location'],
                 properties: {
                   survey_details: {
                     description: 'Survey Details',
@@ -166,18 +158,6 @@ GET.apiDoc = {
                               type: 'string'
                             }
                           }
-                        }
-                      }
-                    }
-                  },
-                  funding: {
-                    description: 'Survey Funding Sources',
-                    type: 'object',
-                    properties: {
-                      funding_sources: {
-                        type: 'array',
-                        items: {
-                          type: 'integer'
                         }
                       }
                     }
@@ -324,18 +304,9 @@ export function getSurveyForUpdate(): RequestHandler {
         };
       }
 
-      let fundingSources: number[] = [];
-
-      if (surveyObject?.funding?.funding_sources) {
-        fundingSources = surveyObject.funding.funding_sources.map((item) => item.project_funding_source_id);
-      }
-
       const surveyData = {
         ...surveyObject,
         proprietor: proprietor,
-        funding: {
-          funding_sources: fundingSources
-        },
         agreements: {
           sedis_procedures_accepted: 'true',
           foippa_requirements_accepted: 'true'
