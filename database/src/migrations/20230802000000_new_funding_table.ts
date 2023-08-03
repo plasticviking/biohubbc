@@ -15,7 +15,6 @@ export async function up(knex: Knex): Promise<void> {
   -------------------------------------------------------------------------
   SET SEARCH_PATH=biohub_dapi_v1;
 
-  -- Drop view for funding_source table
   DROP VIEW IF EXISTS survey_funding_source;
 
   -------------------------------------------------------------------------
@@ -23,7 +22,6 @@ export async function up(knex: Knex): Promise<void> {
   -------------------------------------------------------------------------
   SET SEARCH_PATH=biohub, public;
 
-  -- Drop survey_funding_source table constraints/indexes
   ALTER TABLE survey_funding_source DROP CONSTRAINT survey_funding_source_pk;
   DROP INDEX survey_funding_source_uk1;
 
@@ -35,7 +33,6 @@ export async function up(knex: Knex): Promise<void> {
   -------------------------------------------------------------------------
   -- Create funding source and join table
   -------------------------------------------------------------------------
-
   CREATE TABLE funding_source(
     funding_source_id        integer           GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1),
     name                     varchar(50)       NOT NULL,
@@ -70,7 +67,7 @@ export async function up(knex: Knex): Promise<void> {
     survey_funding_source_id              integer           GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1),
     funding_source_id                     integer           NOT NULL,
     survey_id                             integer           NOT NULL,
-    amount                                integer           NOT NULL,
+    amount                                money             NOT NULL,
     create_date                           timestamptz(6)    DEFAULT now() NOT NULL,
     create_user                           integer           NOT NULL,
     update_date                           timestamptz(6),
@@ -114,18 +111,59 @@ export async function up(knex: Knex): Promise<void> {
   CREATE UNIQUE INDEX funding_source_nuk1 ON funding_source(name, (record_end_date is NULL)) where record_end_date is null;
 
   -- Add indexes on foreign key columns
-  CREATE UNIQUE INDEX survey_funding_source_idx1 ON survey_funding_source(funding_source_id);
-  CREATE UNIQUE INDEX survey_funding_source_idx2 ON survey_funding_source(survey_id);
+  CREATE INDEX survey_funding_source_idx1 ON survey_funding_source(funding_source_id);
+  CREATE INDEX survey_funding_source_idx2 ON survey_funding_source(survey_id);
 
   ----------------------------------------------------------------------------------------
   -- Insert old data into new tables
   ----------------------------------------------------------------------------------------
+  -- Funding Source
+  ---- get distinct names from project_funding_source
+  ---- fill in info start_date, end_date, record_effective_date from project_funding_source, investment_action_category, agency
+  ---- default description to 'Placeholder, please provide description.'
+  ----------------------------------------------------------------------------------------
+  insert into funding_source (name, description, start_date, end_date, record_effective_date)
+    select distinct on (a.name)
+      a.name, 'Placeholder, please provide description.', pfs.funding_start_date, pfs.funding_end_date, iac.record_effective_date
+        from project_funding_source pfs
+        left join investment_action_category iac on pfs.investment_action_category_id = iac.investment_action_category_id
+        left join agency a on a.agency_id = iac.agency_id
+        where a.name is not null;
 
-  --------------------------------------------------------------------------- Create views   -------------------------------------------------------------------------
+
+  ----------------------------------------------------------------------------------------
+  -- Survey Funding Source
+  ---- get funding_source_id from funding_source
+  ---- get survey_id from project_funding_source
+  ---- get amount from project_funding_source
+  ----------------------------------------------------------------------------------------
+  insert into survey_funding_source (funding_source_id, survey_id, amount)
+    select fs.funding_source_id, id_amount.survey_id, id_amount.funding_amount
+      from funding_source fs
+      left join (
+        select a.name a_name, pfs.funding_amount, sfso.survey_id
+          from project_funding_source pfs
+          left join investment_action_category iac on pfs.investment_action_category_id = iac.investment_action_category_id
+          left join agency a on a.agency_id = iac.agency_id
+          left join survey_funding_source_old sfso on pfs.project_funding_source_id = sfso.project_funding_source_id
+          where a.name is not null
+          and sfso.survey_id is not null
+      ) id_amount on fs.name = id_amount.a_name
+      where id_amount.survey_id is not null;
+
+  ----------------------------------------------------------------------------------------
+  -- Create views / Drop old tables
+  ----------------------------------------------------------------------------------------
   SET SEARCH_PATH=biohub_dapi_v1;
   CREATE OR REPLACE VIEW funding_source AS SELECT * FROM biohub.funding_source;
   CREATE OR REPLACE VIEW survey_funding_source AS SELECT * FROM biohub.survey_funding_source;
-  CREATE OR REPLACE VIEW survey_funding_source_old AS SELECT * FROM biohub.survey_funding_source_old;
+
+  DROP VIEW IF EXISTS biohub_dapi_v1.survey_funding_source_old;
+  DROP VIEW IF EXISTS biohub_dapi_v1.project_funding_source;
+
+  SET SEARCH_PATH=biohub, public;
+  DROP TABLE IF EXISTS survey_funding_source_old;
+  DROP TABLE IF EXISTS project_funding_source;
  `);
 }
 
