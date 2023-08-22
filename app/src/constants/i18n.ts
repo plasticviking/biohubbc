@@ -331,6 +331,10 @@ export const SurveyAnimalsI18N = {
   animalMortalityHelp:
     "Mortality Events describe an individual's death, including the suspected location, date, and cause of death. An individual can only have one Mortality Event.",
   animalMortalityAddBtn: 'Add Mortality',
+  animalImagesTitle: 'Images',
+  animalImagesTitle2: 'Uploaded Image',
+  animalImagesHelp: 'Images help placeholder',
+  animalImagesAddBtn: 'Upload Image',
 
   // Input help strings
   taxonHelp:

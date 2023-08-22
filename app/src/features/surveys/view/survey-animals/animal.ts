@@ -123,7 +123,9 @@ const AnimalTelemetryDeviceSchema = yup.object({}).shape({
   model: yup.string().required(req)
 });
 
-const AnimalImageSchema = yup.object({}).shape({});
+const AnimalImageSchema = yup.object({}).shape({
+  _id: yup.string().required()
+});
 
 export const AnimalSchema = yup.object({}).shape({
   general: AnimalGeneralSchema,
