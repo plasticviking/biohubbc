@@ -1,3 +1,14 @@
+import { AttachmentType } from 'constants/attachments';
+import { AuthStateContext } from 'contexts/authStateContext';
+import { DialogContextProvider } from 'contexts/dialogContext';
+import { IProjectAuthStateContext, ProjectAuthStateContext } from 'contexts/projectAuthStateContext';
+import { IProjectContext, ProjectContext } from 'contexts/projectContext';
+import { ISurveyContext, SurveyContext } from 'contexts/surveyContext';
+import { createMemoryHistory } from 'history';
+import { useBiohubApi } from 'hooks/useBioHubApi';
+import { DataLoader } from 'hooks/useDataLoader';
+import { Router } from 'react-router';
+import { getMockAuthState, SystemAdminAuthState } from 'test-helpers/auth-helpers';
 import {
   cleanup,
   fireEvent,
@@ -5,20 +16,13 @@ import {
   queryByTestId as rawQueryByTestId,
   render,
   waitFor
-} from '@testing-library/react';
-import { AttachmentType } from 'constants/attachments';
-import { AuthStateContext, IAuthState } from 'contexts/authStateContext';
-import { DialogContextProvider } from 'contexts/dialogContext';
-import { IProjectAuthStateContext, ProjectAuthStateContext } from 'contexts/projectAuthStateContext';
-import { ISurveyContext, SurveyContext } from 'contexts/surveyContext';
-import { useBiohubApi } from 'hooks/useBioHubApi';
-import { DataLoader } from 'hooks/useDataLoader';
-import { IKeycloakWrapper } from 'hooks/useKeycloakWrapper';
-import React from 'react';
+} from 'test-helpers/test-utils';
 import SurveyAttachments from './SurveyAttachments';
 
 jest.mock('../../../hooks/useBioHubApi');
-const mockUseBiohubApi = {
+const mockBiohubApi = useBiohubApi as jest.Mock;
+
+const mockUseApi = {
   survey: {
     getSurveyForView: jest.fn(),
     getSurveySummarySubmission: jest.fn(),
@@ -30,15 +34,13 @@ const mockUseBiohubApi = {
   }
 };
 
-const mockBiohubApi = ((useBiohubApi as unknown) as jest.Mock<typeof mockUseBiohubApi>).mockReturnValue(
-  mockUseBiohubApi
-);
+const history = createMemoryHistory({ initialEntries: ['/admin/projects/1'] });
 
 describe('SurveyAttachments', () => {
   beforeEach(() => {
-    // clear mocks before each test
-    mockBiohubApi().survey.getSurveyAttachments.mockClear();
-    mockBiohubApi().survey.deleteSurveyAttachment.mockClear();
+    mockBiohubApi.mockImplementation(() => mockUseApi);
+    mockUseApi.survey.getSurveyAttachments.mockClear();
+    mockUseApi.survey.deleteSurveyAttachment.mockClear();
   });
 
   afterEach(() => {
@@ -46,29 +48,50 @@ describe('SurveyAttachments', () => {
   });
 
   it('correctly opens and closes the file upload dialog', async () => {
-    const mockSurveyContext: ISurveyContext = ({
-      artifactDataLoader: ({
+    const mockSurveyContext: ISurveyContext = {
+      artifactDataLoader: {
         data: null,
         load: jest.fn()
-      } as unknown) as DataLoader<any, any, any>,
+      } as unknown as DataLoader<any, any, any>,
       surveyId: 1,
-      projectId: 1
-    } as unknown) as ISurveyContext;
+      projectId: 1,
+      surveyDataLoader: {
+        data: { surveyData: { survey_details: { survey_name: 'name' } } },
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>
+    } as unknown as ISurveyContext;
 
     const mockProjectAuthStateContext: IProjectAuthStateContext = {
       getProjectParticipant: () => null,
       hasProjectRole: () => true,
+      hasProjectPermission: () => true,
       hasSystemRole: () => true,
       getProjectId: () => 1,
       hasLoadedParticipantInfo: true
     };
 
+    const mockProjectContext: IProjectContext = {
+      artifactDataLoader: {
+        data: null,
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>,
+      projectId: 1,
+      projectDataLoader: {
+        data: { projectData: { project: { project_name: 'name' } } },
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>
+    } as unknown as IProjectContext;
+
     const { getByText, queryByText } = render(
-      <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
-        <SurveyContext.Provider value={mockSurveyContext}>
-          <SurveyAttachments />
-        </SurveyContext.Provider>
-      </ProjectAuthStateContext.Provider>
+      <Router history={history}>
+        <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
+          <ProjectContext.Provider value={mockProjectContext}>
+            <SurveyContext.Provider value={mockSurveyContext}>
+              <SurveyAttachments />
+            </SurveyContext.Provider>
+          </ProjectContext.Provider>
+        </ProjectAuthStateContext.Provider>
+      </Router>
     );
     await waitFor(() => {
       expect(getByText('Upload')).toBeInTheDocument();
@@ -89,29 +112,50 @@ describe('SurveyAttachments', () => {
   });
 
   it('renders correctly with no attachments', async () => {
-    const mockSurveyContext: ISurveyContext = ({
-      artifactDataLoader: ({
+    const mockSurveyContext: ISurveyContext = {
+      artifactDataLoader: {
         data: null,
         load: jest.fn()
-      } as unknown) as DataLoader<any, any, any>,
+      } as unknown as DataLoader<any, any, any>,
       surveyId: 1,
-      projectId: 1
-    } as unknown) as ISurveyContext;
+      projectId: 1,
+      surveyDataLoader: {
+        data: { surveyData: { survey_details: { survey_name: 'name' } } },
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>
+    } as unknown as ISurveyContext;
 
     const mockProjectAuthStateContext: IProjectAuthStateContext = {
       getProjectParticipant: () => null,
       hasProjectRole: () => true,
+      hasProjectPermission: () => true,
       hasSystemRole: () => true,
       getProjectId: () => 1,
       hasLoadedParticipantInfo: true
     };
 
+    const mockProjectContext: IProjectContext = {
+      artifactDataLoader: {
+        data: null,
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>,
+      projectId: 1,
+      projectDataLoader: {
+        data: { projectData: { project: { project_name: 'name' } } },
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>
+    } as unknown as IProjectContext;
+
     const { getByText } = render(
-      <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
-        <SurveyContext.Provider value={mockSurveyContext}>
-          <SurveyAttachments />
-        </SurveyContext.Provider>
-      </ProjectAuthStateContext.Provider>
+      <Router history={history}>
+        <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
+          <ProjectContext.Provider value={mockProjectContext}>
+            <SurveyContext.Provider value={mockSurveyContext}>
+              <SurveyAttachments />
+            </SurveyContext.Provider>
+          </ProjectContext.Provider>
+        </ProjectAuthStateContext.Provider>
+      </Router>
     );
     await waitFor(() => {
       expect(getByText('No Documents')).toBeInTheDocument();
@@ -119,8 +163,8 @@ describe('SurveyAttachments', () => {
   });
 
   it('renders correctly with attachments', async () => {
-    const mockSurveyContext: ISurveyContext = ({
-      artifactDataLoader: ({
+    const mockSurveyContext: ISurveyContext = {
+      artifactDataLoader: {
         data: {
           attachmentsList: [
             {
@@ -132,27 +176,48 @@ describe('SurveyAttachments', () => {
           ]
         },
         load: jest.fn()
-      } as unknown) as DataLoader<any, any, any>,
+      } as unknown as DataLoader<any, any, any>,
       surveyId: 1,
-      projectId: 1
-    } as unknown) as ISurveyContext;
+      projectId: 1,
+      surveyDataLoader: {
+        data: { surveyData: { survey_details: { survey_name: 'name' } } },
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>
+    } as unknown as ISurveyContext;
 
     const mockProjectAuthStateContext: IProjectAuthStateContext = {
       getProjectParticipant: () => null,
       hasProjectRole: () => true,
+      hasProjectPermission: () => true,
       hasSystemRole: () => true,
       getProjectId: () => 1,
       hasLoadedParticipantInfo: true
     };
 
-    mockBiohubApi().survey.getSurveyAttachments.mockResolvedValue({});
+    mockUseApi.survey.getSurveyAttachments.mockResolvedValue({});
+
+    const mockProjectContext: IProjectContext = {
+      artifactDataLoader: {
+        data: null,
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>,
+      projectId: 1,
+      projectDataLoader: {
+        data: { projectData: { project: { project_name: 'name' } } },
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>
+    } as unknown as IProjectContext;
 
     const { getByText } = render(
-      <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
-        <SurveyContext.Provider value={mockSurveyContext}>
-          <SurveyAttachments />
-        </SurveyContext.Provider>
-      </ProjectAuthStateContext.Provider>
+      <Router history={history}>
+        <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
+          <ProjectContext.Provider value={mockProjectContext}>
+            <SurveyContext.Provider value={mockSurveyContext}>
+              <SurveyAttachments />
+            </SurveyContext.Provider>
+          </ProjectContext.Provider>
+        </ProjectAuthStateContext.Provider>
+      </Router>
     );
 
     await waitFor(() => {
@@ -161,10 +226,10 @@ describe('SurveyAttachments', () => {
   });
 
   it('deletes an attachment from the attachments list as expected', async () => {
-    mockBiohubApi().survey.deleteSurveyAttachment.mockResolvedValue(1);
+    mockUseApi.survey.deleteSurveyAttachment.mockResolvedValue(1);
 
-    const mockSurveyContext: ISurveyContext = ({
-      artifactDataLoader: ({
+    const mockSurveyContext: ISurveyContext = {
+      artifactDataLoader: {
         data: {
           attachmentsList: [
             {
@@ -184,33 +249,52 @@ describe('SurveyAttachments', () => {
           ]
         },
         load: jest.fn()
-      } as unknown) as DataLoader<any, any, any>,
+      } as unknown as DataLoader<any, any, any>,
       surveyId: 1,
-      projectId: 1
-    } as unknown) as ISurveyContext;
+      projectId: 1,
+      surveyDataLoader: {
+        data: { surveyData: { survey_details: { survey_name: 'name' } } },
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>
+    } as unknown as ISurveyContext;
 
     const mockProjectAuthStateContext: IProjectAuthStateContext = {
       getProjectParticipant: () => null,
       hasProjectRole: () => true,
+      hasProjectPermission: () => true,
       hasSystemRole: () => true,
       getProjectId: () => 1,
       hasLoadedParticipantInfo: true
     };
 
-    const mockAuthStateContext: IAuthState = {
-      keycloakWrapper: ({ hasSystemRole: () => true } as unknown) as IKeycloakWrapper
-    };
+    const mockProjectContext: IProjectContext = {
+      artifactDataLoader: {
+        data: null,
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>,
+      projectId: 1,
+      projectDataLoader: {
+        data: { projectData: { project: { project_name: 'name' } } },
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>
+    } as unknown as IProjectContext;
+
+    const authState = getMockAuthState({ base: SystemAdminAuthState });
 
     const { baseElement, queryByText, getByTestId, getAllByTestId, queryByTestId } = render(
-      <AuthStateContext.Provider value={mockAuthStateContext}>
-        <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
-          <DialogContextProvider>
-            <SurveyContext.Provider value={mockSurveyContext}>
-              <SurveyAttachments />
-            </SurveyContext.Provider>
-          </DialogContextProvider>
-        </ProjectAuthStateContext.Provider>
-      </AuthStateContext.Provider>
+      <Router history={history}>
+        <AuthStateContext.Provider value={authState}>
+          <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
+            <DialogContextProvider>
+              <ProjectContext.Provider value={mockProjectContext}>
+                <SurveyContext.Provider value={mockSurveyContext}>
+                  <SurveyAttachments />
+                </SurveyContext.Provider>
+              </ProjectContext.Provider>
+            </DialogContextProvider>
+          </ProjectAuthStateContext.Provider>
+        </AuthStateContext.Provider>
+      </Router>
     );
 
     await waitFor(() => {
@@ -241,10 +325,10 @@ describe('SurveyAttachments', () => {
   });
 
   it('does not delete an attachment from the attachments when user selects no from dialog', async () => {
-    mockBiohubApi().survey.deleteSurveyAttachment.mockResolvedValue(1);
+    mockUseApi.survey.deleteSurveyAttachment.mockResolvedValue(1);
 
-    const mockSurveyContext: ISurveyContext = ({
-      artifactDataLoader: ({
+    const mockSurveyContext: ISurveyContext = {
+      artifactDataLoader: {
         data: {
           attachmentsList: [
             {
@@ -257,40 +341,59 @@ describe('SurveyAttachments', () => {
           ]
         },
         load: jest.fn()
-      } as unknown) as DataLoader<any, any, any>,
+      } as unknown as DataLoader<any, any, any>,
       surveyId: 1,
-      projectId: 1
-    } as unknown) as ISurveyContext;
+      projectId: 1,
+      surveyDataLoader: {
+        data: { surveyData: { survey_details: { survey_name: 'name' } } },
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>
+    } as unknown as ISurveyContext;
 
     const mockProjectAuthStateContext: IProjectAuthStateContext = {
       getProjectParticipant: () => null,
       hasProjectRole: () => true,
+      hasProjectPermission: () => true,
       hasSystemRole: () => true,
       getProjectId: () => 1,
       hasLoadedParticipantInfo: true
     };
 
-    const mockAuthStateContext: IAuthState = {
-      keycloakWrapper: ({ hasSystemRole: () => true } as unknown) as IKeycloakWrapper
-    };
+    const mockProjectContext: IProjectContext = {
+      artifactDataLoader: {
+        data: null,
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>,
+      projectId: 1,
+      projectDataLoader: {
+        data: { projectData: { project: { project_name: 'name' } } },
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>
+    } as unknown as IProjectContext;
+
+    const authState = getMockAuthState({ base: SystemAdminAuthState });
 
     const { baseElement, queryByText, getByTestId, getAllByTestId, queryByTestId } = render(
-      <AuthStateContext.Provider value={mockAuthStateContext}>
-        <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
-          <DialogContextProvider>
-            <SurveyContext.Provider value={mockSurveyContext}>
-              <SurveyAttachments />
-            </SurveyContext.Provider>
-          </DialogContextProvider>
-        </ProjectAuthStateContext.Provider>
-      </AuthStateContext.Provider>
+      <Router history={history}>
+        <AuthStateContext.Provider value={authState}>
+          <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
+            <DialogContextProvider>
+              <ProjectContext.Provider value={mockProjectContext}>
+                <SurveyContext.Provider value={mockSurveyContext}>
+                  <SurveyAttachments />
+                </SurveyContext.Provider>
+              </ProjectContext.Provider>
+            </DialogContextProvider>
+          </ProjectAuthStateContext.Provider>
+        </AuthStateContext.Provider>
+      </Router>
     );
 
     await waitFor(() => {
       expect(queryByText('filename.test')).toBeInTheDocument();
     });
 
-    mockBiohubApi().survey.getSurveyAttachments.mockResolvedValue({
+    mockUseApi.survey.getSurveyAttachments.mockResolvedValue({
       attachmentsList: []
     });
 
@@ -314,9 +417,9 @@ describe('SurveyAttachments', () => {
   });
 
   it('does not delete an attachment from the attachments when user clicks outside the dialog', async () => {
-    mockBiohubApi().survey.deleteSurveyAttachment.mockResolvedValue(1);
-    const mockSurveyContext: ISurveyContext = ({
-      artifactDataLoader: ({
+    mockUseApi.survey.deleteSurveyAttachment.mockResolvedValue(1);
+    const mockSurveyContext: ISurveyContext = {
+      artifactDataLoader: {
         data: {
           attachmentsList: [
             {
@@ -329,40 +432,59 @@ describe('SurveyAttachments', () => {
           ]
         },
         load: jest.fn()
-      } as unknown) as DataLoader<any, any, any>,
+      } as unknown as DataLoader<any, any, any>,
       surveyId: 1,
-      projectId: 1
-    } as unknown) as ISurveyContext;
+      projectId: 1,
+      surveyDataLoader: {
+        data: { surveyData: { survey_details: { survey_name: 'name' } } },
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>
+    } as unknown as ISurveyContext;
+
+    const mockProjectContext: IProjectContext = {
+      artifactDataLoader: {
+        data: null,
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>,
+      projectId: 1,
+      projectDataLoader: {
+        data: { projectData: { project: { project_name: 'name' } } },
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>
+    } as unknown as IProjectContext;
 
     const mockProjectAuthStateContext: IProjectAuthStateContext = {
       getProjectParticipant: () => null,
       hasProjectRole: () => true,
+      hasProjectPermission: () => true,
       hasSystemRole: () => true,
       getProjectId: () => 1,
       hasLoadedParticipantInfo: true
     };
 
-    const mockAuthStateContext: IAuthState = {
-      keycloakWrapper: ({ hasSystemRole: () => true } as unknown) as IKeycloakWrapper
-    };
+    const authState = getMockAuthState({ base: SystemAdminAuthState });
 
     const { baseElement, queryByText, getAllByTestId, queryByTestId, getAllByRole } = render(
-      <AuthStateContext.Provider value={mockAuthStateContext}>
-        <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
-          <DialogContextProvider>
-            <SurveyContext.Provider value={mockSurveyContext}>
-              <SurveyAttachments />
-            </SurveyContext.Provider>
-          </DialogContextProvider>
-        </ProjectAuthStateContext.Provider>
-      </AuthStateContext.Provider>
+      <Router history={history}>
+        <AuthStateContext.Provider value={authState}>
+          <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
+            <DialogContextProvider>
+              <ProjectContext.Provider value={mockProjectContext}>
+                <SurveyContext.Provider value={mockSurveyContext}>
+                  <SurveyAttachments />
+                </SurveyContext.Provider>
+              </ProjectContext.Provider>
+            </DialogContextProvider>
+          </ProjectAuthStateContext.Provider>
+        </AuthStateContext.Provider>
+      </Router>
     );
 
     await waitFor(() => {
       expect(queryByText('filename.test')).toBeInTheDocument();
     });
 
-    mockBiohubApi().survey.getSurveyAttachments.mockResolvedValue({
+    mockUseApi.survey.getSurveyAttachments.mockResolvedValue({
       attachmentsList: []
     });
 

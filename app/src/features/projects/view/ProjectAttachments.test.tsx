@@ -1,3 +1,13 @@
+import { AttachmentType } from 'constants/attachments';
+import { AuthStateContext } from 'contexts/authStateContext';
+import { DialogContextProvider } from 'contexts/dialogContext';
+import { IProjectAuthStateContext, ProjectAuthStateContext } from 'contexts/projectAuthStateContext';
+import { IProjectContext, ProjectContext } from 'contexts/projectContext';
+import { createMemoryHistory } from 'history';
+import { useBiohubApi } from 'hooks/useBioHubApi';
+import { DataLoader } from 'hooks/useDataLoader';
+import { Router } from 'react-router';
+import { getMockAuthState, SystemAdminAuthState } from 'test-helpers/auth-helpers';
 import {
   cleanup,
   fireEvent,
@@ -5,20 +15,13 @@ import {
   queryByTestId as rawQueryByTestId,
   render,
   waitFor
-} from '@testing-library/react';
-import { AttachmentType } from 'constants/attachments';
-import { AuthStateContext, IAuthState } from 'contexts/authStateContext';
-import { DialogContextProvider } from 'contexts/dialogContext';
-import { IProjectAuthStateContext, ProjectAuthStateContext } from 'contexts/projectAuthStateContext';
-import { IProjectContext, ProjectContext } from 'contexts/projectContext';
-import { useBiohubApi } from 'hooks/useBioHubApi';
-import { DataLoader } from 'hooks/useDataLoader';
-import { IKeycloakWrapper } from 'hooks/useKeycloakWrapper';
-import React from 'react';
+} from 'test-helpers/test-utils';
 import ProjectAttachments from './ProjectAttachments';
 
 jest.mock('../../../hooks/useBioHubApi');
-const mockUseBiohubApi = {
+const mockBiohubApi = useBiohubApi as jest.Mock;
+
+const mockUseApi = {
   project: {
     getProjectForView: jest.fn(),
     getProjectAttachments: jest.fn(),
@@ -26,15 +29,13 @@ const mockUseBiohubApi = {
   }
 };
 
-const mockBiohubApi = ((useBiohubApi as unknown) as jest.Mock<typeof mockUseBiohubApi>).mockReturnValue(
-  mockUseBiohubApi
-);
+const history = createMemoryHistory({ initialEntries: ['/admin/projects/1'] });
 
 describe('ProjectAttachments', () => {
   beforeEach(() => {
-    // clear mocks before each test
-    mockBiohubApi().project.getProjectAttachments.mockClear();
-    mockBiohubApi().project.deleteProjectAttachment.mockClear();
+    mockBiohubApi.mockImplementation(() => mockUseApi);
+    mockUseApi.project.getProjectAttachments.mockClear();
+    mockUseApi.project.deleteProjectAttachment.mockClear();
   });
 
   afterEach(() => {
@@ -42,28 +43,35 @@ describe('ProjectAttachments', () => {
   });
 
   it('correctly opens and closes the file upload dialog', async () => {
-    const mockProjectContext: IProjectContext = ({
-      artifactDataLoader: ({
+    const mockProjectContext: IProjectContext = {
+      artifactDataLoader: {
         data: null,
         load: jest.fn()
-      } as unknown) as DataLoader<any, any, any>,
-      projectId: 1
-    } as unknown) as IProjectContext;
+      } as unknown as DataLoader<any, any, any>,
+      projectId: 1,
+      projectDataLoader: {
+        data: { projectData: { project: { project_name: 'name' } } },
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>
+    } as unknown as IProjectContext;
 
     const mockProjectAuthStateContext: IProjectAuthStateContext = {
       getProjectParticipant: () => null,
       hasProjectRole: () => true,
+      hasProjectPermission: () => true,
       hasSystemRole: () => true,
       getProjectId: () => 1,
       hasLoadedParticipantInfo: true
     };
 
     const { getByText, queryByText } = render(
-      <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
-        <ProjectContext.Provider value={mockProjectContext}>
-          <ProjectAttachments />
-        </ProjectContext.Provider>
-      </ProjectAuthStateContext.Provider>
+      <Router history={history}>
+        <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
+          <ProjectContext.Provider value={mockProjectContext}>
+            <ProjectAttachments />
+          </ProjectContext.Provider>
+        </ProjectAuthStateContext.Provider>
+      </Router>
     );
 
     await waitFor(() => {
@@ -83,28 +91,35 @@ describe('ProjectAttachments', () => {
   });
 
   it('renders correctly with no attachments', async () => {
-    const mockProjectContext: IProjectContext = ({
-      artifactDataLoader: ({
+    const mockProjectContext: IProjectContext = {
+      artifactDataLoader: {
         data: null,
         load: jest.fn()
-      } as unknown) as DataLoader<any, any, any>,
-      projectId: 1
-    } as unknown) as IProjectContext;
+      } as unknown as DataLoader<any, any, any>,
+      projectId: 1,
+      projectDataLoader: {
+        data: { projectData: { project: { project_name: 'name' } } },
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>
+    } as unknown as IProjectContext;
 
     const mockProjectAuthStateContext: IProjectAuthStateContext = {
       getProjectParticipant: () => null,
       hasProjectRole: () => true,
+      hasProjectPermission: () => true,
       hasSystemRole: () => true,
       getProjectId: () => 1,
       hasLoadedParticipantInfo: true
     };
 
     const { getByText } = render(
-      <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
-        <ProjectContext.Provider value={mockProjectContext}>
-          <ProjectAttachments />
-        </ProjectContext.Provider>
-      </ProjectAuthStateContext.Provider>
+      <Router history={history}>
+        <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
+          <ProjectContext.Provider value={mockProjectContext}>
+            <ProjectAttachments />
+          </ProjectContext.Provider>
+        </ProjectAuthStateContext.Provider>
+      </Router>
     );
     await waitFor(() => {
       expect(getByText('No Documents')).toBeInTheDocument();
@@ -112,8 +127,8 @@ describe('ProjectAttachments', () => {
   });
 
   it('renders correctly with attachments', async () => {
-    const mockProjectContext: IProjectContext = ({
-      artifactDataLoader: ({
+    const mockProjectContext: IProjectContext = {
+      artifactDataLoader: {
         data: {
           attachmentsList: [
             {
@@ -125,24 +140,31 @@ describe('ProjectAttachments', () => {
           ]
         },
         load: jest.fn()
-      } as unknown) as DataLoader<any, any, any>,
-      projectId: 1
-    } as unknown) as IProjectContext;
+      } as unknown as DataLoader<any, any, any>,
+      projectId: 1,
+      projectDataLoader: {
+        data: { projectData: { project: { project_name: 'name' } } },
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>
+    } as unknown as IProjectContext;
 
     const mockProjectAuthStateContext: IProjectAuthStateContext = {
       getProjectParticipant: () => null,
       hasProjectRole: () => true,
+      hasProjectPermission: () => true,
       hasSystemRole: () => true,
       getProjectId: () => 1,
       hasLoadedParticipantInfo: true
     };
 
     const { getByText } = render(
-      <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
-        <ProjectContext.Provider value={mockProjectContext}>
-          <ProjectAttachments />
-        </ProjectContext.Provider>
-      </ProjectAuthStateContext.Provider>
+      <Router history={history}>
+        <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
+          <ProjectContext.Provider value={mockProjectContext}>
+            <ProjectAttachments />
+          </ProjectContext.Provider>
+        </ProjectAuthStateContext.Provider>
+      </Router>
     );
 
     await waitFor(() => {
@@ -151,9 +173,9 @@ describe('ProjectAttachments', () => {
   });
 
   it('deletes an attachment from the attachments list as expected', async () => {
-    const deleteProjectAttachmentStub = mockBiohubApi().project.deleteProjectAttachment.mockResolvedValue(1);
-    const mockProjectContext: IProjectContext = ({
-      artifactDataLoader: ({
+    const deleteProjectAttachmentStub = mockUseApi.project.deleteProjectAttachment.mockResolvedValue(1);
+    const mockProjectContext: IProjectContext = {
+      artifactDataLoader: {
         data: {
           attachmentsList: [
             {
@@ -174,32 +196,37 @@ describe('ProjectAttachments', () => {
         },
         load: jest.fn(),
         refresh: jest.fn()
-      } as unknown) as DataLoader<any, any, any>,
-      projectId: 1
-    } as unknown) as IProjectContext;
+      } as unknown as DataLoader<any, any, any>,
+      projectId: 1,
+      projectDataLoader: {
+        data: { projectData: { project: { project_name: 'name' } } },
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>
+    } as unknown as IProjectContext;
 
     const mockProjectAuthStateContext: IProjectAuthStateContext = {
       getProjectParticipant: () => null,
       hasProjectRole: () => true,
+      hasProjectPermission: () => true,
       hasSystemRole: () => true,
       getProjectId: () => 1,
       hasLoadedParticipantInfo: true
     };
 
-    const mockAuthStateContext: IAuthState = {
-      keycloakWrapper: ({ hasSystemRole: () => true } as unknown) as IKeycloakWrapper
-    };
+    const authState = getMockAuthState({ base: SystemAdminAuthState });
 
     const { baseElement, queryByText, getByTestId, getAllByTestId, queryByTestId } = render(
-      <AuthStateContext.Provider value={mockAuthStateContext}>
-        <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
-          <DialogContextProvider>
-            <ProjectContext.Provider value={mockProjectContext}>
-              <ProjectAttachments />
-            </ProjectContext.Provider>
-          </DialogContextProvider>
-        </ProjectAuthStateContext.Provider>
-      </AuthStateContext.Provider>
+      <Router history={history}>
+        <AuthStateContext.Provider value={authState}>
+          <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
+            <DialogContextProvider>
+              <ProjectContext.Provider value={mockProjectContext}>
+                <ProjectAttachments />
+              </ProjectContext.Provider>
+            </DialogContextProvider>
+          </ProjectAuthStateContext.Provider>
+        </AuthStateContext.Provider>
+      </Router>
     );
 
     await waitFor(() => {
@@ -228,9 +255,9 @@ describe('ProjectAttachments', () => {
   });
 
   it('does not delete an attachment from the attachments when user selects no from dialog', async () => {
-    mockBiohubApi().project.deleteProjectAttachment.mockResolvedValue(1);
-    const mockProjectContext: IProjectContext = ({
-      artifactDataLoader: ({
+    mockUseApi.project.deleteProjectAttachment.mockResolvedValue(1);
+    const mockProjectContext: IProjectContext = {
+      artifactDataLoader: {
         data: {
           attachmentsList: [
             {
@@ -242,39 +269,44 @@ describe('ProjectAttachments', () => {
           ]
         },
         load: jest.fn()
-      } as unknown) as DataLoader<any, any, any>,
-      projectId: 1
-    } as unknown) as IProjectContext;
+      } as unknown as DataLoader<any, any, any>,
+      projectId: 1,
+      projectDataLoader: {
+        data: { projectData: { project: { project_name: 'name' } } },
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>
+    } as unknown as IProjectContext;
 
     const mockProjectAuthStateContext: IProjectAuthStateContext = {
       getProjectParticipant: () => null,
       hasProjectRole: () => true,
+      hasProjectPermission: () => true,
       hasSystemRole: () => true,
       getProjectId: () => 1,
       hasLoadedParticipantInfo: true
     };
 
-    const mockAuthStateContext: IAuthState = {
-      keycloakWrapper: ({ hasSystemRole: () => true } as unknown) as IKeycloakWrapper
-    };
+    const authState = getMockAuthState({ base: SystemAdminAuthState });
 
     const { baseElement, queryByText, getByTestId, queryByTestId, getAllByTestId } = render(
-      <AuthStateContext.Provider value={mockAuthStateContext}>
-        <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
-          <DialogContextProvider>
-            <ProjectContext.Provider value={mockProjectContext}>
-              <ProjectAttachments />
-            </ProjectContext.Provider>
-          </DialogContextProvider>
-        </ProjectAuthStateContext.Provider>
-      </AuthStateContext.Provider>
+      <Router history={history}>
+        <AuthStateContext.Provider value={authState}>
+          <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
+            <DialogContextProvider>
+              <ProjectContext.Provider value={mockProjectContext}>
+                <ProjectAttachments />
+              </ProjectContext.Provider>
+            </DialogContextProvider>
+          </ProjectAuthStateContext.Provider>
+        </AuthStateContext.Provider>
+      </Router>
     );
 
     await waitFor(() => {
       expect(queryByText('filename.test')).toBeInTheDocument();
     });
 
-    mockBiohubApi().project.getProjectAttachments.mockResolvedValue({
+    mockUseApi.project.getProjectAttachments.mockResolvedValue({
       attachmentsList: []
     });
 
@@ -298,9 +330,9 @@ describe('ProjectAttachments', () => {
   });
 
   it('does not delete an attachment from the attachments when user clicks outside the dialog', async () => {
-    mockBiohubApi().project.deleteProjectAttachment.mockResolvedValue(1);
-    const mockProjectContext: IProjectContext = ({
-      artifactDataLoader: ({
+    mockUseApi.project.deleteProjectAttachment.mockResolvedValue(1);
+    const mockProjectContext: IProjectContext = {
+      artifactDataLoader: {
         data: {
           attachmentsList: [
             {
@@ -312,39 +344,44 @@ describe('ProjectAttachments', () => {
           ]
         },
         load: jest.fn()
-      } as unknown) as DataLoader<any, any, any>,
-      projectId: 1
-    } as unknown) as IProjectContext;
+      } as unknown as DataLoader<any, any, any>,
+      projectId: 1,
+      projectDataLoader: {
+        data: { projectData: { project: { project_name: 'name' } } },
+        load: jest.fn()
+      } as unknown as DataLoader<any, any, any>
+    } as unknown as IProjectContext;
 
     const mockProjectAuthStateContext: IProjectAuthStateContext = {
       getProjectParticipant: () => null,
       hasProjectRole: () => true,
+      hasProjectPermission: () => true,
       hasSystemRole: () => true,
       getProjectId: () => 1,
       hasLoadedParticipantInfo: true
     };
 
-    const mockAuthStateContext: IAuthState = {
-      keycloakWrapper: ({ hasSystemRole: () => true } as unknown) as IKeycloakWrapper
-    };
+    const authState = getMockAuthState({ base: SystemAdminAuthState });
 
     const { baseElement, queryByText, getAllByRole, queryByTestId, getAllByTestId } = render(
-      <AuthStateContext.Provider value={mockAuthStateContext}>
-        <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
-          <DialogContextProvider>
-            <ProjectContext.Provider value={mockProjectContext}>
-              <ProjectAttachments />
-            </ProjectContext.Provider>
-          </DialogContextProvider>
-        </ProjectAuthStateContext.Provider>
-      </AuthStateContext.Provider>
+      <Router history={history}>
+        <AuthStateContext.Provider value={authState}>
+          <ProjectAuthStateContext.Provider value={mockProjectAuthStateContext}>
+            <DialogContextProvider>
+              <ProjectContext.Provider value={mockProjectContext}>
+                <ProjectAttachments />
+              </ProjectContext.Provider>
+            </DialogContextProvider>
+          </ProjectAuthStateContext.Provider>
+        </AuthStateContext.Provider>
+      </Router>
     );
 
     await waitFor(() => {
       expect(queryByText('filename.test')).toBeInTheDocument();
     });
 
-    mockBiohubApi().project.getProjectAttachments.mockResolvedValue({
+    mockUseApi.project.getProjectAttachments.mockResolvedValue({
       attachmentsList: []
     });
 
