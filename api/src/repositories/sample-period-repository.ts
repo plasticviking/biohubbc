@@ -3,11 +3,14 @@ import { z } from 'zod';
 import { ApiExecuteSQLError } from '../errors/api-error';
 import { BaseRepository } from './base-repository';
 
-export type InsertSamplePeriodRecord = Pick<SamplePeriodRecord, 'survey_sample_method_id' | 'start_date' | 'end_date'>;
+export type InsertSamplePeriodRecord = Pick<
+  SamplePeriodRecord,
+  'survey_sample_method_id' | 'start_date' | 'end_date' | 'start_time' | 'end_time'
+>;
 
 export type UpdateSamplePeriodRecord = Pick<
   SamplePeriodRecord,
-  'survey_sample_period_id' | 'survey_sample_method_id' | 'start_date' | 'end_date'
+  'survey_sample_period_id' | 'survey_sample_method_id' | 'start_date' | 'end_date' | 'start_time' | 'end_time'
 >;
 
 // This describes a row in the database for Survey Sample Period
@@ -16,6 +19,8 @@ export const SamplePeriodRecord = z.object({
   survey_sample_method_id: z.number(),
   start_date: z.string(),
   end_date: z.string(),
+  start_time: z.string().nullable(),
+  end_time: z.string().nullable(),
   create_date: z.string(),
   create_user: z.number(),
   update_date: z.string().nullable(),
@@ -63,7 +68,9 @@ export class SamplePeriodRepository extends BaseRepository {
       SET
         survey_sample_method_id=${sample.survey_sample_method_id},
         start_date=${sample.start_date},
-        end_date=${sample.end_date}
+        end_date=${sample.end_date},
+        start_time=${sample.start_time},
+        end_time=${sample.end_time}
         WHERE
         survey_sample_period_id = ${sample.survey_sample_period_id}
       RETURNING
@@ -93,11 +100,15 @@ export class SamplePeriodRepository extends BaseRepository {
     INSERT INTO survey_sample_period (
       survey_sample_method_id,
       start_date,
-      end_date
+      end_date,
+      start_time,
+      end_time
     ) VALUES (
       ${sample.survey_sample_method_id},
       ${sample.start_date},
-      ${sample.end_date}
+      ${sample.end_date},
+      ${sample.start_time},
+      ${sample.end_time}
       )
       RETURNING
         *;`;
