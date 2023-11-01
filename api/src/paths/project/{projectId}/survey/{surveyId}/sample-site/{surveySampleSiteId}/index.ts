@@ -112,6 +112,14 @@ PUT.apiDoc = {
                             },
                             end_date: {
                               type: 'string'
+                            },
+                            start_time: {
+                              type: 'string',
+                              nullable: true
+                            },
+                            end_time: {
+                              type: 'string',
+                              nullable: true
                             }
                           }
                         }
