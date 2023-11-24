@@ -1,14 +1,12 @@
-import { ADMINISTRATIVE_ACTIVITY_STATUS_TYPE } from '../constants/administrative-activity';
-import { ACCESS_REQUEST_ADMIN_NOTIFICATION_EMAIL } from '../constants/notifications';
-import { IDBConnection } from '../database/db';
+import {ADMINISTRATIVE_ACTIVITY_STATUS_TYPE} from '../constants/administrative-activity';
+import {IDBConnection} from '../database/db';
 import {
   AdministrativeActivityRepository,
   IAdministrativeActivity,
   IAdministrativeActivityStanding,
   ICreateAdministrativeActivity
 } from '../repositories/administrative-activity-repository';
-import { DBService } from './db-service';
-import { GCNotifyService, IgcNotifyPostReturn } from './gcnotify-service';
+import {DBService} from './db-service';
 
 /**
  * Service for working with administrative activity records.
@@ -96,24 +94,5 @@ export class AdministrativeActivityService extends DBService {
    */
   async getAdministrativeActivityStanding(userGUID: string): Promise<IAdministrativeActivityStanding> {
     return this.administrativeActivityRepository.getAdministrativeActivityStanding(userGUID);
-  }
-
-  /**
-   * Send an email notification to a user about their access request being received.
-   *
-   * @return {*}  {Promise<IgcNotifyPostReturn>}
-   * @memberof AdministrativeActivityService
-   */
-  async sendAccessRequestNotificationEmailToAdmin(): Promise<IgcNotifyPostReturn> {
-    const gcnotifyService = new GCNotifyService();
-    const url = `${this.APP_HOST}/login?redirect=${encodeURIComponent('admin/users')}`;
-    const hrefUrl = `[click here.](${url})`;
-
-    return gcnotifyService.sendEmailGCNotification(this.ADMIN_EMAIL, {
-      ...ACCESS_REQUEST_ADMIN_NOTIFICATION_EMAIL,
-      subject: `${this.NODE_ENV}: ${ACCESS_REQUEST_ADMIN_NOTIFICATION_EMAIL.subject}`,
-      main_body1: `${ACCESS_REQUEST_ADMIN_NOTIFICATION_EMAIL.main_body1} ${hrefUrl}`,
-      footer: `${this.APP_HOST}`
-    });
   }
 }

@@ -59,17 +59,17 @@ POST.apiDoc = {
 
 export function signUp(): RequestHandler {
   return async (req, res) => {
-    const user: ICritterbaseUser = {
-      keycloak_guid: req['system_user']?.user_guid,
-      username: req['system_user']?.user_identifier
-    };
-    const cb = new CritterbaseService(user);
-    try {
-      const result = await cb.signUp();
-      return res.status(200).json(result);
-    } catch (error) {
-      defaultLog.error({ label: 'signUp', message: 'error', error });
-      throw error;
-    }
+    // const user: ICritterbaseUser = {
+    //   keycloak_guid: req['system_user']?.user_guid,
+    //   username: req['system_user']?.user_identifier
+    // };
+    // const cb = new CritterbaseService(user);
+    // try {
+    //   const result = await cb.signUp();
+    //   return res.status(200).json(result);
+    // } catch (error) {
+    //   defaultLog.error({ label: 'signUp', message: 'error', error });
+    //   throw error;
+    // }
   };
 }
