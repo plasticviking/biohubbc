@@ -1,4 +1,4 @@
-import { Theme, Typography } from '@mui/material';
+import { Stack, Theme, Typography } from '@mui/material';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
@@ -7,6 +7,8 @@ import { makeStyles } from '@mui/styles';
 import HorizontalSplitFormComponent from 'components/fields/HorizontalSplitFormComponent';
 import { ScrollToFormikError } from 'components/formik/ScrollToFormikError';
 import { DATE_FORMAT, DATE_LIMIT } from 'constants/dateTimeFormats';
+import { default as dayjs } from 'dayjs';
+import SamplingStrategyForm from 'features/surveys/components/SamplingStrategyForm';
 import SurveyPartnershipsForm, {
   SurveyPartnershipsFormInitialValues,
   SurveyPartnershipsFormYupSchema
@@ -15,7 +17,6 @@ import { Formik, FormikProps } from 'formik';
 import { IGetAllCodeSetsResponse } from 'interfaces/useCodesApi.interface';
 import { ProjectViewObject } from 'interfaces/useProjectApi.interface';
 import { IEditSurveyRequest, SurveyUpdateObject } from 'interfaces/useSurveyApi.interface';
-import moment from 'moment';
 import React, { useState } from 'react';
 import { StringBoolean } from 'types/misc';
 import { getFormattedDate } from 'utils/Utils';
@@ -27,7 +28,6 @@ import GeneralInformationForm, {
 } from '../components/GeneralInformationForm';
 import ProprietaryDataForm, { ProprietaryDataYupSchema } from '../components/ProprietaryDataForm';
 import PurposeAndMethodologyForm, { PurposeAndMethodologyYupSchema } from '../components/PurposeAndMethodologyForm';
-import SamplingMethodsForm from '../components/SamplingMethodsForm';
 import StudyAreaForm, { SurveyLocationInitialValues, SurveyLocationYupSchema } from '../components/StudyAreaForm';
 import { SurveyBlockInitialValues } from '../components/SurveyBlockSection';
 import SurveyFundingSourceForm, {
@@ -73,10 +73,8 @@ const EditSurveyForm: React.FC<IEditSurveyForm> = (props) => {
     ...GeneralInformationInitialValues,
     ...{
       purpose_and_methodology: {
-        intended_outcome_id: '' as unknown as number,
+        intended_outcome_ids: [],
         additional_details: '',
-        field_method_id: '' as unknown as number,
-        ecological_season_id: '' as unknown as number,
         vantage_code_ids: []
       }
     },
@@ -117,7 +115,7 @@ const EditSurveyForm: React.FC<IEditSurveyForm> = (props) => {
         }`
       )
       .isAfterDate(
-        moment(DATE_LIMIT.min).toISOString(),
+        dayjs(DATE_LIMIT.min).toISOString(),
         DATE_FORMAT.ShortDateFormat,
         `Survey start date cannot be before ${getFormattedDate(DATE_FORMAT.ShortMediumDateFormat, DATE_LIMIT.min)}`
       )
@@ -134,7 +132,7 @@ const EditSurveyForm: React.FC<IEditSurveyForm> = (props) => {
         }`
       )
       .isBeforeDate(
-        moment(DATE_LIMIT.max).toISOString(),
+        dayjs(DATE_LIMIT.max).toISOString(),
         DATE_FORMAT.ShortDateFormat,
         `Survey end date cannot be after ${getFormattedDate(DATE_FORMAT.ShortMediumDateFormat, DATE_LIMIT.max)}`
       )
@@ -188,16 +186,6 @@ const EditSurveyForm: React.FC<IEditSurveyForm> = (props) => {
                     return { value: item.id, label: item.name, subText: item.description };
                   }) || []
                 }
-                field_methods={
-                  props.codes.field_methods.map((item) => {
-                    return { value: item.id, label: item.name, subText: item.description };
-                  }) || []
-                }
-                ecological_seasons={
-                  props.codes.ecological_seasons.map((item) => {
-                    return { value: item.id, label: item.name, subText: item.description };
-                  }) || []
-                }
                 vantage_codes={
                   props.codes.vantage_codes.map((item) => {
                     return { value: item.id, label: item.name };
@@ -240,9 +228,9 @@ const EditSurveyForm: React.FC<IEditSurveyForm> = (props) => {
           <Divider className={classes.sectionDivider} />
 
           <HorizontalSplitFormComponent
-            title="Sampling Methods"
+            title="Sampling Strategy"
             summary="Specify site selection methods, stratums and optional sampling blocks for this survey."
-            component={<SamplingMethodsForm />}
+            component={<SamplingStrategyForm />}
           />
 
           <Divider className={classes.sectionDivider} />
@@ -250,7 +238,18 @@ const EditSurveyForm: React.FC<IEditSurveyForm> = (props) => {
           <HorizontalSplitFormComponent
             title="Study Area"
             summary=""
-            component={<StudyAreaForm />}></HorizontalSplitFormComponent>
+            component={
+              <Box component="fieldset">
+                <Typography component="legend">Define Survey Study Area</Typography>
+                <Stack gap={3}>
+                  <Typography variant="body1" color="textSecondary">
+                    Import, draw or select a feature from an existing layer to define the study areas for this survey.
+                  </Typography>
+                  <StudyAreaForm />
+                </Stack>
+              </Box>
+            }
+          />
 
           <Divider className={classes.sectionDivider} />
 

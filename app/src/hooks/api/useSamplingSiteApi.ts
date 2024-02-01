@@ -56,10 +56,40 @@ const useSamplingSiteApi = (axios: AxiosInstance) => {
     await axios.put(`/api/project/${projectId}/survey/${surveyId}/sample-site/${sampleSiteId}`, sampleSite);
   };
 
+  /**
+   * Delete Sample Site
+   *
+   * @param {number} projectId
+   * @param {number} surveyId
+   * @param {number} sampleSiteId
+   * @return {*}  {Promise<void>}
+   */
+  const deleteSampleSite = async (projectId: number, surveyId: number, sampleSiteId: number): Promise<void> => {
+    await axios.delete(`/api/project/${projectId}/survey/${surveyId}/sample-site/${sampleSiteId}`);
+  };
+
+  /**
+   * Delete Sample Sites
+   *
+   * @param {number} projectId
+   * @param {number} surveyId
+   * @param {number} surveySampleSiteIds
+   * @return {*}  {Promise<void>}
+   */
+  const deleteSampleSites = async (
+    projectId: number,
+    surveyId: number,
+    surveySampleSiteIds: number[]
+  ): Promise<void> => {
+    await axios.post(`/api/project/${projectId}/survey/${surveyId}/sample-site/delete`, { surveySampleSiteIds });
+  };
+
   return {
     createSamplingSites,
     getSampleSites,
-    editSampleSite
+    editSampleSite,
+    deleteSampleSite,
+    deleteSampleSites
   };
 };
 

@@ -15,8 +15,12 @@ export const GET: Operation = [
     return {
       or: [
         {
-          validProjectPermissions: [PROJECT_PERMISSION.COORDINATOR],
-          projectId: Number(req.params.projectId),
+          validProjectPermissions: [
+            PROJECT_PERMISSION.COORDINATOR,
+            PROJECT_PERMISSION.COLLABORATOR,
+            PROJECT_PERMISSION.OBSERVER
+          ],
+          surveyId: Number(req.params.surveyId),
           discriminator: 'ProjectPermission'
         },
         {
@@ -187,7 +191,7 @@ export const POST: Operation = [
       or: [
         {
           validProjectPermissions: [PROJECT_PERMISSION.COORDINATOR],
-          projectId: Number(req.params.projectId),
+          surveyId: Number(req.params.surveyId),
           discriminator: 'ProjectPermission'
         },
         {
@@ -233,14 +237,8 @@ POST.apiDoc = {
       'application/json': {
         schema: {
           type: 'object',
-          required: ['name', 'description', 'methods', 'survey_sample_sites'],
+          required: ['methods', 'survey_sample_sites'],
           properties: {
-            name: {
-              type: 'string'
-            },
-            description: {
-              type: 'string'
-            },
             methods: {
               type: 'array',
               minItems: 1,
@@ -266,6 +264,14 @@ POST.apiDoc = {
                         },
                         end_date: {
                           type: 'string'
+                        },
+                        start_time: {
+                          type: 'string',
+                          nullable: true
+                        },
+                        end_time: {
+                          type: 'string',
+                          nullable: true
                         }
                       }
                     }
@@ -277,7 +283,16 @@ POST.apiDoc = {
               type: 'array',
               minItems: 1,
               items: {
-                ...(GeoJSONFeature as object)
+                type: 'object',
+                properties: {
+                  name: {
+                    type: 'string'
+                  },
+                  description: {
+                    type: 'string'
+                  },
+                  feature: { ...(GeoJSONFeature as object) }
+                }
               }
             }
           }

@@ -16,7 +16,7 @@ export const PUT: Operation = [
       or: [
         {
           validProjectPermissions: [PROJECT_PERMISSION.COORDINATOR, PROJECT_PERMISSION.COLLABORATOR],
-          projectId: Number(req.params.projectId),
+          surveyId: Number(req.params.surveyId),
           discriminator: 'ProjectPermission'
         },
         {
@@ -210,32 +210,23 @@ PUT.apiDoc = {
             },
             purpose_and_methodology: {
               type: 'object',
-              required: [
-                'intended_outcome_id',
-                'additional_details',
-                'field_method_id',
-                'vantage_code_ids',
-                'ecological_season_id',
-                'revision_count'
-              ],
+              required: ['intended_outcome_ids', 'additional_details', 'vantage_code_ids', 'revision_count'],
               properties: {
-                intended_outcome_id: {
-                  type: 'number'
+                intended_outcome_ids: {
+                  type: 'array',
+                  minItems: 1,
+                  items: {
+                    type: 'integer'
+                  }
                 },
                 additional_details: {
                   type: 'string'
-                },
-                field_method_id: {
-                  type: 'number'
                 },
                 vantage_code_ids: {
                   type: 'array',
                   items: {
                     type: 'number'
                   }
-                },
-                ecological_season_id: {
-                  type: 'number'
                 },
                 revision_count: {
                   type: 'number'
@@ -245,6 +236,7 @@ PUT.apiDoc = {
             locations: {
               description: 'Survey location data',
               type: 'array',
+              minItems: 1,
               items: {
                 type: 'object',
                 required: ['name', 'description', 'geojson'],
@@ -280,6 +272,7 @@ PUT.apiDoc = {
               properties: {
                 strategies: {
                   type: 'array',
+                  minItems: 1,
                   items: {
                     type: 'string'
                   }
@@ -372,7 +365,7 @@ PUT.apiDoc = {
       $ref: '#/components/responses/401'
     },
     403: {
-      $ref: '#/components/responses/401'
+      $ref: '#/components/responses/403'
     },
     500: {
       $ref: '#/components/responses/500'
@@ -385,7 +378,6 @@ PUT.apiDoc = {
 
 export function updateSurvey(): RequestHandler {
   return async (req, res) => {
-    const projectId = Number(req.params.projectId);
     const surveyId = Number(req.params.surveyId);
 
     const sanitizedPutSurveyData = new PutSurveyObject(req.body);
@@ -397,7 +389,7 @@ export function updateSurvey(): RequestHandler {
 
       const surveyService = new SurveyService(connection);
 
-      await surveyService.updateSurveyAndUploadMetadataToBiohub(projectId, surveyId, sanitizedPutSurveyData);
+      await surveyService.updateSurvey(surveyId, sanitizedPutSurveyData);
 
       await connection.commit();
 

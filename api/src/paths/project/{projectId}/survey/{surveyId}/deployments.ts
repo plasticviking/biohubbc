@@ -15,7 +15,7 @@ export const GET: Operation = [
       or: [
         {
           validProjectPermissions: [PROJECT_PERMISSION.COORDINATOR, PROJECT_PERMISSION.COLLABORATOR],
-          projectId: Number(req.params.projectId),
+          surveyId: Number(req.params.surveyId),
           discriminator: 'ProjectPermission'
         },
         {
@@ -69,7 +69,7 @@ GET.apiDoc = {
       $ref: '#/components/responses/401'
     },
     403: {
-      $ref: '#/components/responses/401'
+      $ref: '#/components/responses/403'
     },
     500: {
       $ref: '#/components/responses/500'

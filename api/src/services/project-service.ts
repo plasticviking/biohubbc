@@ -1,14 +1,13 @@
+import { default as dayjs } from 'dayjs';
 import { Feature } from 'geojson';
-import moment from 'moment';
 import { COMPLETION_STATUS } from '../constants/status';
 import { IDBConnection } from '../database/db';
 import { HTTP400 } from '../errors/http-error';
 import { IPostIUCN, PostProjectObject } from '../models/project-create';
-import { IPutIUCN, PutIUCNData, PutLocationData, PutObjectivesData, PutProjectData } from '../models/project-update';
+import { IPutIUCN, PutIUCNData, PutObjectivesData, PutProjectData } from '../models/project-update';
 import {
   GetAttachmentsData,
   GetIUCNClassificationData,
-  GetLocationData,
   GetObjectivesData,
   GetReportAttachmentsData,
   IGetProject,
@@ -22,7 +21,6 @@ import { ProjectUser } from '../repositories/project-participation-repository';
 import { ProjectRepository } from '../repositories/project-repository';
 import { SystemUser } from '../repositories/user-repository';
 import { deleteFileFromS3 } from '../utils/file-utils';
-import { getLogger } from '../utils/logger';
 import { AttachmentService } from './attachment-service';
 import { DBService } from './db-service';
 import { HistoryPublishService } from './history-publish-service';
@@ -30,8 +28,6 @@ import { PlatformService } from './platform-service';
 import { ProjectParticipationService } from './project-participation-service';
 import { RegionService } from './region-service';
 import { SurveyService } from './survey-service';
-
-const defaultLog = getLogger('services/project-service');
 
 export class ProjectService extends DBService {
   attachmentService: AttachmentService;
@@ -64,7 +60,7 @@ export class ProjectService extends DBService {
       start_date: row.start_date,
       end_date: row.end_date,
       completion_status:
-        (row.end_date && moment(row.end_date).endOf('day').isBefore(moment()) && COMPLETION_STATUS.COMPLETED) ||
+        (row.end_date && dayjs(row.end_date).endOf('day').isBefore(dayjs()) && COMPLETION_STATUS.COMPLETED) ||
         COMPLETION_STATUS.ACTIVE,
       project_programs: row.project_programs,
       regions: row.regions
@@ -72,11 +68,10 @@ export class ProjectService extends DBService {
   }
 
   async getProjectById(projectId: number): Promise<IGetProject> {
-    const [projectData, objectiveData, projectParticipantsData, locationData, iucnData] = await Promise.all([
+    const [projectData, objectiveData, projectParticipantsData, iucnData] = await Promise.all([
       this.getProjectData(projectId),
       this.getObjectivesData(projectId),
       this.getProjectParticipantsData(projectId),
-      this.getLocationData(projectId),
       this.getIUCNClassificationData(projectId)
     ]);
 
@@ -84,7 +79,6 @@ export class ProjectService extends DBService {
       project: projectData,
       objectives: objectiveData,
       participants: projectParticipantsData,
-      location: locationData,
       iucn: iucnData
     };
   }
@@ -106,19 +100,10 @@ export class ProjectService extends DBService {
     const results: Partial<IGetProject> = {
       project: undefined,
       objectives: undefined,
-      location: undefined,
       iucn: undefined
     };
 
     const promises: Promise<any>[] = [];
-
-    if (entities.includes(GET_ENTITIES.location)) {
-      promises.push(
-        this.getLocationData(projectId).then((value) => {
-          results.location = value;
-        })
-      );
-    }
 
     if (entities.includes(GET_ENTITIES.iucn)) {
       promises.push(
@@ -169,10 +154,6 @@ export class ProjectService extends DBService {
     return this.projectParticipationService.getProjectParticipants(projectId);
   }
 
-  async getLocationData(projectId: number): Promise<GetLocationData> {
-    return this.projectRepository.getLocationData(projectId);
-  }
-
   async getIUCNClassificationData(projectId: number): Promise<GetIUCNClassificationData> {
     return this.projectRepository.getIUCNClassificationData(projectId);
   }
@@ -183,25 +164,6 @@ export class ProjectService extends DBService {
 
   async getReportAttachmentsData(projectId: number): Promise<GetReportAttachmentsData> {
     return this.projectRepository.getReportAttachmentsData(projectId);
-  }
-
-  /**
-   *
-   *
-   * @param {PostProjectObject} postProjectData
-   * @return {*}  {Promise<number>}
-   * @memberof ProjectService
-   */
-  async createProjectAndUploadMetadataToBioHub(postProjectData: PostProjectObject): Promise<number> {
-    const projectId = await this.createProject(postProjectData);
-
-    try {
-      await this.platformService.submitProjectDwCMetadataToBioHub(projectId);
-    } catch (error) {
-      defaultLog.warn({ label: 'createProjectAndUploadMetadataToBioHub', message: 'error', error });
-    }
-
-    return projectId;
   }
 
   /**
@@ -224,9 +186,6 @@ export class ProjectService extends DBService {
         )
       )
     );
-
-    // Handle project regions
-    promises.push(this.insertRegion(projectId, postProjectData.location.geometry));
 
     // Handle project programs
     promises.push(this.insertPrograms(projectId, postProjectData.project.project_programs));
@@ -302,32 +261,6 @@ export class ProjectService extends DBService {
   }
 
   /**
-   * Updates the project and uploads affected metadata to BioHub
-   *
-   * @param {number} projectId
-   * @param {IUpdateProject} entities
-   * @return {*}  {Promise<void>}
-   * @memberof ProjectService
-   */
-  async updateProjectAndUploadMetadataToBioHub(projectId: number, entities: IUpdateProject): Promise<void> {
-    await this.updateProject(projectId, entities);
-
-    try {
-      // Publish project metadata
-      const publishProjectPromise = this.platformService.submitProjectDwCMetadataToBioHub(projectId);
-
-      // Publish all survey metadata (which needs to be updated now that the project metadata has changed)
-      const publishSurveysPromise = this.surveyService.getSurveyIdsByProjectId(projectId).then((surveyIds) => {
-        return surveyIds.map((item) => this.platformService.submitSurveyDwCMetadataToBioHub(item.id));
-      });
-
-      await Promise.all([publishProjectPromise, publishSurveysPromise]);
-    } catch (error) {
-      defaultLog.warn({ label: 'updateProjectAndUploadMetadataToBioHub', message: 'error', error });
-    }
-  }
-
-  /**
    * Updates the project
    *
    * @param {number} projectId
@@ -338,7 +271,7 @@ export class ProjectService extends DBService {
   async updateProject(projectId: number, entities: IUpdateProject): Promise<void> {
     const promises: Promise<any>[] = [];
 
-    if (entities?.project || entities?.location || entities?.objectives) {
+    if (entities?.project || entities?.objectives) {
       promises.push(this.updateProjectData(projectId, entities));
     }
 
@@ -372,24 +305,16 @@ export class ProjectService extends DBService {
 
   async updateProjectData(projectId: number, entities: IUpdateProject): Promise<void> {
     const putProjectData = (entities?.project && new PutProjectData(entities.project)) || null;
-    const putLocationData = (entities?.location && new PutLocationData(entities.location)) || null;
     const putObjectivesData = (entities?.objectives && new PutObjectivesData(entities.objectives)) || null;
 
     // Update project table
-    const revision_count =
-      putProjectData?.revision_count ?? putLocationData?.revision_count ?? putObjectivesData?.revision_count ?? null;
+    const revision_count = putProjectData?.revision_count ?? putObjectivesData?.revision_count ?? null;
 
     if (!revision_count && revision_count !== 0) {
       throw new HTTP400('Failed to parse request body');
     }
 
-    await this.projectRepository.updateProjectData(
-      projectId,
-      putProjectData,
-      putLocationData,
-      putObjectivesData,
-      revision_count
-    );
+    await this.projectRepository.updateProjectData(projectId, putProjectData, putObjectivesData, revision_count);
   }
 
   async deleteProject(projectId: number): Promise<boolean | null> {

@@ -29,7 +29,7 @@ export const POST: Operation = [
 
 POST.apiDoc = {
   description: 'Publish Survey data to Biohub.',
-  tags: ['survey', 'dwca', 'biohub'],
+  tags: ['survey', 'biohub'],
   security: [
     {
       Bearer: []
@@ -41,46 +41,21 @@ POST.apiDoc = {
       'application/json': {
         schema: {
           type: 'object',
-          required: ['projectId', 'surveyId', 'data'],
+          required: ['surveyId', 'data'],
           properties: {
-            projectId: {
-              type: 'number'
-            },
             surveyId: {
-              type: 'number'
+              type: 'integer',
+              minimum: 1
             },
             data: {
-              description: 'All survey data to upload',
+              description: 'Additional data to include in the submission to BioHub',
               type: 'object',
-              required: ['observations', 'summary', 'reports', 'attachments'],
+              required: ['submissionComment'],
               properties: {
-                observations: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {}
-                  }
-                },
-                summary: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {}
-                  }
-                },
-                reports: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {}
-                  }
-                },
-                attachments: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {}
-                  }
+                submissionComment: {
+                  type: 'string',
+                  description:
+                    'Submission comment to include in the submission to BioHub. May include sensitive information.'
                 }
               }
             }
@@ -97,9 +72,10 @@ POST.apiDoc = {
           schema: {
             type: 'object',
             properties: {
-              uuid: {
+              submission_uuid: {
                 type: 'string',
-                format: 'uuid'
+                format: 'uuid',
+                description: 'The UUID of the submission'
               }
             }
           }
@@ -113,7 +89,7 @@ POST.apiDoc = {
       $ref: '#/components/responses/401'
     },
     403: {
-      $ref: '#/components/responses/401'
+      $ref: '#/components/responses/403'
     },
     500: {
       $ref: '#/components/responses/500'
@@ -139,7 +115,7 @@ export function publishSurvey(): RequestHandler {
       await connection.open();
 
       const platformService = new PlatformService(connection);
-      const response = await platformService.submitSurveyDataToBioHub(surveyId, data);
+      const response = await platformService.submitSurveyToBioHub(surveyId, data);
 
       await connection.commit();
 

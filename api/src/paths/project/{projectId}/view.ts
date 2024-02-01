@@ -2,7 +2,6 @@ import { RequestHandler } from 'express';
 import { Operation } from 'express-openapi';
 import { PROJECT_PERMISSION, SYSTEM_ROLE } from '../../../constants/roles';
 import { getDBConnection } from '../../../database/db';
-import { GeoJSONFeature } from '../../../openapi/schemas/geoJson';
 import { authorizeRequestHandler } from '../../../request-handlers/security/authorization';
 import { ProjectService } from '../../../services/project-service';
 import { getLogger } from '../../../utils/logger';
@@ -63,7 +62,7 @@ GET.apiDoc = {
             properties: {
               projectData: {
                 type: 'object',
-                required: ['project', 'participants', 'objectives', 'location', 'iucn'],
+                required: ['project', 'participants', 'objectives', 'iucn'],
                 properties: {
                   project: {
                     description: 'Basic project metadata',
@@ -155,22 +154,6 @@ GET.apiDoc = {
                       }
                     }
                   },
-                  location: {
-                    description: 'The project location object',
-                    type: 'object',
-                    required: ['location_description', 'geometry'],
-                    properties: {
-                      location_description: {
-                        type: 'string'
-                      },
-                      geometry: {
-                        type: 'array',
-                        items: {
-                          ...(GeoJSONFeature as object)
-                        }
-                      }
-                    }
-                  },
                   iucn: {
                     description: 'The International Union for Conservation of Nature number',
                     type: 'object',
@@ -210,7 +193,7 @@ GET.apiDoc = {
                       'project_metadata_publish_id',
                       'project_id',
                       'event_timestamp',
-                      'queue_id',
+                      'submission_uuid',
                       'create_date',
                       'create_user',
                       'update_date',
@@ -230,9 +213,9 @@ GET.apiDoc = {
                         oneOf: [{ type: 'object' }, { type: 'string', format: 'date' }],
                         description: 'ISO 8601 date string for the project start date'
                       },
-                      queue_id: {
-                        type: 'integer',
-                        minimum: 1
+                      submission_uuid: {
+                        type: 'string',
+                        format: 'uuid'
                       },
                       create_date: {
                         oneOf: [{ type: 'object' }, { type: 'string', format: 'date' }],
@@ -272,7 +255,7 @@ GET.apiDoc = {
       $ref: '#/components/responses/401'
     },
     403: {
-      $ref: '#/components/responses/401'
+      $ref: '#/components/responses/403'
     },
     500: {
       $ref: '#/components/responses/500'

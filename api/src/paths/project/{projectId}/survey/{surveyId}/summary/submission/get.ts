@@ -21,7 +21,7 @@ export const GET: Operation = [
             PROJECT_PERMISSION.COLLABORATOR,
             PROJECT_PERMISSION.OBSERVER
           ],
-          projectId: Number(req.params.projectId),
+          surveyId: Number(req.params.surveyId),
           discriminator: 'ProjectPermission'
         },
         {
@@ -121,8 +121,7 @@ GET.apiDoc = {
                     description: 'ISO 8601 date string for the project start date'
                   },
                   artifact_revision_id: {
-                    type: 'integer',
-                    minimum: 1
+                    type: 'string'
                   },
                   create_date: {
                     oneOf: [{ type: 'object' }, { type: 'string', format: 'date' }],
@@ -160,7 +159,7 @@ GET.apiDoc = {
       $ref: '#/components/responses/401'
     },
     403: {
-      $ref: '#/components/responses/401'
+      $ref: '#/components/responses/403'
     },
     500: {
       $ref: '#/components/responses/500'

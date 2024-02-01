@@ -2,7 +2,7 @@ import chai, { expect } from 'chai';
 import { describe } from 'mocha';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
-import { GetIUCNClassificationData, GetLocationData, GetObjectivesData, ProjectData } from '../models/project-view';
+import { GetIUCNClassificationData, GetObjectivesData, ProjectData } from '../models/project-view';
 import { ProjectRepository } from '../repositories/project-repository';
 import { getMockDBConnection } from '../__mocks__/db';
 import { HistoryPublishService } from './history-publish-service';
@@ -65,7 +65,7 @@ describe('ProjectService', () => {
         project_metadata_publish_id: 1,
         project_id: 1,
         event_timestamp: '',
-        queue_id: 1,
+        submission_uuid: '',
         create_date: '',
         create_user: 1,
         update_date: null,
@@ -123,22 +123,6 @@ describe('getObjectivesData', () => {
     const repoStub = sinon.stub(ProjectRepository.prototype, 'getObjectivesData').resolves(data);
 
     const response = await service.getObjectivesData(1);
-
-    expect(repoStub).to.be.calledOnce;
-    expect(response).to.eql(data);
-  });
-});
-
-describe('getLocationData', () => {
-  it('returns the first row on success', async () => {
-    const dbConnection = getMockDBConnection();
-    const service = new ProjectService(dbConnection);
-
-    const data = new GetLocationData({ id: 1 });
-
-    const repoStub = sinon.stub(ProjectRepository.prototype, 'getLocationData').resolves(data);
-
-    const response = await service.getLocationData(1);
 
     expect(repoStub).to.be.calledOnce;
     expect(response).to.eql(data);

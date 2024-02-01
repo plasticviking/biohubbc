@@ -195,29 +195,28 @@ POST.apiDoc = {
             purpose_and_methodology: {
               type: 'object',
               properties: {
-                intended_outcome_id: {
-                  type: 'number'
+                intended_outcome_ids: {
+                  type: 'array',
+                  minItems: 1,
+                  items: {
+                    type: 'integer'
+                  }
                 },
                 additional_details: {
                   type: 'string'
-                },
-                field_method_id: {
-                  type: 'number'
                 },
                 vantage_code_ids: {
                   type: 'array',
                   items: {
                     type: 'number'
                   }
-                },
-                ecological_season_id: {
-                  type: 'number'
                 }
               }
             },
             locations: {
               description: 'Survey location data',
               type: 'array',
+              minItems: 1,
               items: {
                 type: 'object',
                 required: ['name', 'description', 'geojson'],
@@ -245,6 +244,7 @@ POST.apiDoc = {
               properties: {
                 strategies: {
                   type: 'array',
+                  minItems: 1,
                   items: {
                     type: 'string'
                   }
@@ -327,7 +327,7 @@ POST.apiDoc = {
       $ref: '#/components/responses/401'
     },
     403: {
-      $ref: '#/components/responses/401'
+      $ref: '#/components/responses/403'
     },
     500: {
       $ref: '#/components/responses/500'
@@ -350,7 +350,7 @@ export function createSurvey(): RequestHandler {
       await connection.open();
 
       const surveyService = new SurveyService(connection);
-      const surveyId = await surveyService.createSurveyAndUploadMetadataToBioHub(projectId, sanitizedPostSurveyData);
+      const surveyId = await surveyService.createSurvey(projectId, sanitizedPostSurveyData);
 
       await connection.commit();
 

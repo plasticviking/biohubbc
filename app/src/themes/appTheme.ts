@@ -38,19 +38,27 @@ const appTheme = createTheme({
   typography: {
     fontFamily: ['BCSans', 'Verdana', 'Arial', 'sans-serif'].join(','),
     h1: {
-      fontSize: '2.25rem',
-      fontWeight: 700
+      fontSize: '1.875rem',
+      fontWeight: 700,
+      paddingTop: '4px',
+      paddingBottom: '6px',
+      display: '-webkit-box',
+      WebkitLineClamp: '2',
+      WebkitBoxOrient: 'vertical',
+      maxWidth: '72ch',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
     },
     h2: {
-      fontSize: '1.875rem',
-      fontWeight: 700
-    },
-    h3: {
       fontSize: '1.5rem',
       fontWeight: 700
     },
-    h4: {
+    h3: {
       fontSize: '1.25rem',
+      fontWeight: 700
+    },
+    h4: {
+      fontSize: '1.125rem',
       fontWeight: 700
     },
     h5: {
@@ -87,6 +95,13 @@ const appTheme = createTheme({
         }
       }
     },
+    MuiAlert: {
+      styleOverrides: {
+        outlinedError: {
+          background: 'rgb(251, 237, 238)'
+        }
+      }
+    },
     MuiAlertTitle: {
       styleOverrides: {
         root: {
@@ -104,7 +119,7 @@ const appTheme = createTheme({
     MuiBreadcrumbs: {
       styleOverrides: {
         root: {
-          marginTop: '-8px',
+          marginTop: '-4px',
           marginBottom: '4px',
           marginLeft: '-4px'
         },
@@ -112,12 +127,22 @@ const appTheme = createTheme({
           maxWidth: '40ch',
           padding: '4px',
           whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis'
+          '& a': {
+            display: 'block',
+            fontSize: '0.9rem',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          },
+          '& span': {
+            display: 'block',
+            fontSize: '0.9rem',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }
         },
         separator: {
-          marginLeft: '4px',
-          marginRight: '4px'
+          marginRight: '4px',
+          marginLeft: '4px'
         }
       }
     },
@@ -139,6 +164,10 @@ const appTheme = createTheme({
           fontSize: '1rem'
         },
         containedPrimary: {
+          fontWeight: 700,
+          letterSpacing: '0.02rem'
+        },
+        containedError: {
           fontWeight: 700,
           letterSpacing: '0.02rem'
         },
@@ -171,7 +200,7 @@ const appTheme = createTheme({
     MuiDialog: {
       styleOverrides: {
         paperWidthXl: {
-          width: '800px'
+          minWidth: '800px'
         }
       }
     },
@@ -192,7 +221,7 @@ const appTheme = createTheme({
     MuiDialogActions: {
       styleOverrides: {
         root: {
-          padding: '20px 24px',
+          padding: '24px',
           '& button': {
             minWidth: '6rem'
           }
@@ -209,17 +238,31 @@ const appTheme = createTheme({
         }
       }
     },
+    MuiInputBase: {
+      styleOverrides: {
+        root: {
+          background: '#fff',
+          '&.Mui-error': {}
+        }
+      }
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          '&.Mui-error .MuiOutlinedInput-notchedOutline': {
+            borderWidth: '2px',
+            top: '-4px'
+          }
+        }
+      }
+    },
     MuiLink: {
       styleOverrides: {
         root: {
           textAlign: 'left',
           color: '#1a5a96',
           borderRadius: '1px',
-          cursor: 'pointer',
-          '&:focus': {
-            outline: '2px solid #3B99FC',
-            outlineOffset: '2px'
-          }
+          cursor: 'pointer'
         }
       }
     },
@@ -257,6 +300,7 @@ const appTheme = createTheme({
     MuiTable: {
       styleOverrides: {
         root: {
+          fontSize: '0.9rem',
           '& th': {
             letterSpacing: '0.02rem',
             textTransform: 'uppercase',
@@ -291,10 +335,17 @@ const appTheme = createTheme({
         }
       }
     },
+    MuiToggleButton: {
+      styleOverrides: {
+        root: {
+          background: '#fff'
+        }
+      }
+    },
     MuiToolbar: {
       styleOverrides: {
         root: {
-          '& h2': {
+          '& h2, h3': {
             fontSize: '1.125rem'
           }
         }

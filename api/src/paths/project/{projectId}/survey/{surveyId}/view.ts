@@ -19,7 +19,7 @@ export const GET: Operation = [
             PROJECT_PERMISSION.COLLABORATOR,
             PROJECT_PERMISSION.OBSERVER
           ],
-          projectId: Number(req.params.projectId),
+          surveyId: Number(req.params.surveyId),
           discriminator: 'ProjectPermission'
         },
         {
@@ -230,29 +230,17 @@ GET.apiDoc = {
                   purpose_and_methodology: {
                     description: 'Survey Details',
                     type: 'object',
-                    required: [
-                      'field_method_id',
-                      'additional_details',
-                      'intended_outcome_id',
-                      'ecological_season_id',
-                      'vantage_code_ids',
-                      'revision_count'
-                    ],
+                    required: ['additional_details', 'intended_outcome_ids', 'vantage_code_ids', 'revision_count'],
                     properties: {
-                      field_method_id: {
-                        type: 'number'
-                      },
                       additional_details: {
                         type: 'string',
                         nullable: true
                       },
-                      intended_outcome_id: {
-                        type: 'number',
-                        nullable: true
-                      },
-                      ecological_season_id: {
-                        type: 'number',
-                        nullable: true
+                      intended_outcome_ids: {
+                        type: 'array',
+                        items: {
+                          type: 'number'
+                        }
                       },
                       vantage_code_ids: {
                         type: 'array',
@@ -391,7 +379,7 @@ GET.apiDoc = {
                       'survey_metadata_publish_id',
                       'survey_id',
                       'event_timestamp',
-                      'queue_id',
+                      'submission_uuid',
                       'create_date',
                       'create_user',
                       'update_date',
@@ -411,9 +399,9 @@ GET.apiDoc = {
                         oneOf: [{ type: 'object' }, { type: 'string', format: 'date' }],
                         description: 'ISO 8601 date string for the project start date'
                       },
-                      queue_id: {
-                        type: 'integer',
-                        minimum: 1
+                      submission_uuid: {
+                        type: 'string',
+                        format: 'uuid'
                       },
                       create_date: {
                         oneOf: [{ type: 'object' }, { type: 'string', format: 'date' }],
@@ -453,7 +441,7 @@ GET.apiDoc = {
       $ref: '#/components/responses/401'
     },
     403: {
-      $ref: '#/components/responses/401'
+      $ref: '#/components/responses/403'
     },
     500: {
       $ref: '#/components/responses/500'
